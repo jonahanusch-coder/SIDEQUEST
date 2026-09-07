@@ -155,6 +155,16 @@ a{color:inherit;}
 .hero-title{ font-size:26px; font-weight:800; letter-spacing:-0.01em; margin:6px 0 2px; }
 .hero-sub{ color:var(--text-dim); font-size:14.5px; margin-bottom:20px; }
 
+.reminder-banner{
+  display:flex; align-items:center; gap:10px; background:rgba(244,193,66,0.09);
+  border:1px solid var(--gold-dim); border-radius:var(--r-md); padding:12px 14px; margin-bottom:16px;
+}
+.reminder-banner-text{ flex:1; font-size:13px; color:#e8cf8f; line-height:1.4; }
+.reminder-banner-close{
+  background:none; border:none; color:var(--text-faint); font-size:16px; cursor:pointer; padding:2px 6px;
+}
+.weather-status-line{ font-size:11.5px; color:var(--text-faint); margin-top:8px; }
+
 .filter-block{
   background:var(--card); border:1px solid var(--border); border-radius:var(--r-lg);
   padding:18px 16px 20px; margin-bottom:16px;
@@ -433,6 +443,41 @@ input[type=range]::-moz-range-thumb{
 .detail-block{ margin-bottom:18px; }
 .detail-label{ font-size:11.5px; letter-spacing:0.1em; color:var(--text-faint); font-weight:700; margin-bottom:6px; }
 .detail-text{ font-size:14.5px; color:var(--text-dim); line-height:1.55; }
+
+/* ============================================================
+   HELL-MODUS (überschreibt nur die Farb-Variablen)
+   ============================================================ */
+body.theme-light{
+  --bg:#f4f5fa;
+  --bg-soft:#ffffff;
+  --card:#ffffff;
+  --card-2:#eef0f6;
+  --card-hover:#e4e7f0;
+  --border:rgba(20,22,30,0.09);
+  --border-strong:rgba(20,22,30,0.16);
+  --text:#181a22;
+  --text-dim:#565a6c;
+  --text-faint:#8b8fa3;
+  --shadow:0 12px 28px -14px rgba(30,32,50,0.18);
+}
+body.theme-light{
+  background:
+    radial-gradient(circle at 15% 0%, rgba(143,123,247,0.08), transparent 45%),
+    radial-gradient(circle at 90% 15%, rgba(63,209,196,0.06), transparent 40%),
+    var(--bg);
+}
+body.theme-light .onb-title{
+  background:linear-gradient(120deg,#2b2350, #6a58d6 60%, #1f9c90);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+body.theme-light .recap-num{
+  background:linear-gradient(120deg,#2b2350, #1f9c90);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+body.theme-light .bottom-nav{ background:rgba(255,255,255,0.92); }
+body.theme-light .sheet{ background:var(--bg-soft); }
+body.theme-light input[type=range]::-webkit-slider-thumb{ border-color:var(--violet); }
+body.theme-light .reminder-banner{ background:rgba(244,193,66,0.14); }
 </style>
 </head>
 <body>
@@ -445,10 +490,12 @@ input[type=range]::-moz-range-thumb{
   <div class="onb-title">Was machen<br>wir heute?</div>
   <div class="onb-sub">Euer gemeinsamer Pool an Ideen.</div>
   <div class="onb-card">
-    <div class="onb-label">Wähle deinen Namen</div>
+    <div class="onb-label" id="onbLabel">Wähle deinen Namen</div>
     <div id="onbProfiles" class="onb-profiles"></div>
-    <input id="onbNameInput" class="onb-input" type="text" placeholder="Name" maxlength="16">
-    <button id="onbContinueBtn" class="btn-primary">WEITER</button>
+    <div id="onbNewProfileWrap">
+      <input id="onbNameInput" class="onb-input" type="text" placeholder="Name" maxlength="16">
+      <button id="onbContinueBtn" class="btn-primary">WEITER</button>
+    </div>
   </div>
 </div>
 
@@ -610,7 +657,8 @@ function makeSeedState(){
     recentlyDrawnIds: [],
     nextIdeaCounter: counter,
     nextQuestCounter: 1,
-    settings: { weatherAware: false, darkMode: true },
+    installedAt: now,
+    settings: { weatherAware: false, darkMode: true, theme: "dark", notificationsEnabled: false },
     filters: { duration: "any", location: "any", adventure: 3 }
   };
 }
@@ -623,8 +671,16 @@ function ensureState(){
   }
   // Migrations-Sicherheit für fehlende Felder
   if(!state.filters) state.filters = { duration:"any", location:"any", adventure:3 };
-  if(!state.settings) state.settings = { weatherAware:false, darkMode:true };
+  if(!state.settings) state.settings = { weatherAware:false, darkMode:true, theme:"dark", notificationsEnabled:false };
+  if(!state.settings.theme) state.settings.theme = "dark";
+  if(typeof state.settings.notificationsEnabled !== "boolean") state.settings.notificationsEnabled = false;
   if(!state.recentlyDrawnIds) state.recentlyDrawnIds = [];
+  if(!state.installedAt){
+    // Ältestes bekanntes Datum als Näherung, falls Feld aus einer älteren Version fehlt
+    const oldestIdea = state.ideas.reduce((min,i)=> i.createdAt < min ? i.createdAt : min, Date.now());
+    state.installedAt = oldestIdea;
+  }
+  applyTheme();
 }
 
 function uid(prefix){ return prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -665,6 +721,18 @@ function showToast(msg){
   root.appendChild(el);
   setTimeout(()=>{ el.remove(); }, 1800);
 }
+
+/* ---------- Theme (Hell / Dunkel) ---------- */
+function applyTheme(){
+  document.body.classList.toggle("theme-light", state.settings.theme === "light");
+}
+
+/* ---------- Erinnerung: lange keine Sidequest mehr ---------- */
+function daysSinceLastActivity(){
+  const last = state.completedQuests.length ? state.completedQuests[0].completedAt : state.installedAt;
+  return daysSince(last);
+}
+const REMINDER_THRESHOLD_DAYS = 28; // 4 Wochen
 
 /* ---------- Wetterlogik ----------
    Fragt das aktuelle Wetter live für Ingolstadt ab (Open-Meteo — kostenlos,
@@ -789,6 +857,7 @@ function registerDraw(ideaId){
    ============================================================ */
 let drawnIdea = null; // aktuell auf der Karte gezeigte Idee (noch nicht angenommen)
 let drawnWeather = null;
+let reminderDismissedThisSession = false;
 
 function renderDrawView(){
   const el = document.getElementById("view-draw");
@@ -802,10 +871,17 @@ function renderDrawView(){
 
   const u = currentUser();
   const f = state.filters;
+  const showReminder = !reminderDismissedThisSession && daysSinceLastActivity() >= REMINDER_THRESHOLD_DAYS;
 
   el.innerHTML = `
     <div class="hero-title">SIDEQUEST</div>
     <div class="hero-sub">Was machen wir heute, ${u ? u.name : ""}?</div>
+
+    ${showReminder ? `
+    <div class="reminder-banner" id="reminderBanner">
+      <div class="reminder-banner-text">🕰️ Es ist schon ${daysSinceLastActivity()} Tage her seit eurer letzten Sidequest. Zeit für was Neues?</div>
+      <button class="reminder-banner-close" id="reminderCloseBtn">✕</button>
+    </div>` : ""}
 
     <div class="filter-block">
       <div class="filter-heading">EURE FILTER</div>
@@ -840,6 +916,7 @@ function renderDrawView(){
             <span class="slider-toggle"></span>
           </label>
         </div>
+        ${state.settings.weatherAware ? `<div class="weather-status-line" id="weatherStatusLine">Wird geprüft …</div>` : `<div class="weather-status-line">Prüft bei Aktivierung live das Wetter für Ingolstadt.</div>`}
       </div>
     </div>
 
@@ -852,10 +929,33 @@ function renderDrawView(){
 
   bindDrawFilterEvents();
 
+  const reminderCloseBtn = document.getElementById("reminderCloseBtn");
+  if(reminderCloseBtn){
+    reminderCloseBtn.addEventListener("click", ()=>{
+      reminderDismissedThisSession = true;
+      document.getElementById("reminderBanner").remove();
+    });
+  }
+
+  if(state.settings.weatherAware){
+    updateWeatherStatusLine();
+  }
+
   if(drawnIdea){
     renderCardStage();
   } else {
     document.getElementById("cardStage").innerHTML = "";
+  }
+}
+
+async function updateWeatherStatusLine(){
+  const w = await getCurrentWeather();
+  const elAfter = document.getElementById("weatherStatusLine");
+  if(!elAfter) return; // Nutzer hat evtl. die Ansicht schon gewechselt
+  if(w.source && w.source.indexOf("live") === 0){
+    elAfter.textContent = `🌡️ ${Math.round(w.temp)}°C in Ingolstadt · ${w.label} (Live-Daten)`;
+  } else {
+    elAfter.textContent = `📡 Keine Verbindung zur Wetter-API — Schätzung wird verwendet (${w.label})`;
   }
 }
 
@@ -886,6 +986,7 @@ function bindDrawFilterEvents(){
     wt.addEventListener("change", ()=>{
       state.settings.weatherAware = wt.checked;
       saveState();
+      renderDrawView();
     });
   }
   const drawBtn = document.getElementById("drawBtn");
@@ -1502,12 +1603,8 @@ function renderMoreView(){
     <div class="section-head"><div class="section-title">⚙️ Mehr</div></div>
 
     <div class="more-group">
-      <div class="more-row" id="rowSwitchProfile">
-        <div class="more-row-label">👤 Profil wechseln</div>
-        <div class="more-row-chevron">›</div>
-      </div>
-      <div class="more-row" id="rowManageUsers">
-        <div class="more-row-label">👥 Nutzer verwalten</div>
+      <div class="more-row" id="rowMembers">
+        <div class="more-row-label">👥 Mitglieder</div>
         <div class="more-row-chevron">›</div>
       </div>
       <div class="more-row" id="rowRecap">
@@ -1536,69 +1633,40 @@ function renderMoreView(){
     </div>
   `;
 
-  document.getElementById("rowSwitchProfile").addEventListener("click", openSwitchProfileSheet);
-  document.getElementById("rowManageUsers").addEventListener("click", openManageUsersSheet);
+  document.getElementById("rowMembers").addEventListener("click", openMembersSheet);
   document.getElementById("rowRecap").addEventListener("click", openRecapSheet);
   document.getElementById("rowAiIdeas").addEventListener("click", openAiSurpriseSheet);
   document.getElementById("rowStats").addEventListener("click", openStatsSheet);
   document.getElementById("rowSettings").addEventListener("click", openSettingsSheet);
 }
 
-function openSwitchProfileSheet(){
+/* Zusammengeführte Ansicht aus vormals "Profil wechseln" + "Nutzer verwalten".
+   WICHTIG: Ohne eigenen Server kann diese App nur die Profile kennen, die
+   tatsächlich auf DIESEM Gerät angelegt wurden — es gibt keine Synchronisation
+   zwischen den Handys der Freunde. Pro Gerät ist außerdem nur ein Profil
+   vorgesehen (siehe Onboarding); hier lassen sich versehentlich angelegte
+   Extra-Profile umbenennen oder löschen. */
+function openMembersSheet(){
+  renderMembersList();
+}
+
+function renderMembersList(){
   const rows = state.users.map(u => `
-    <div class="more-row" data-uid="${u.id}" style="cursor:pointer;">
-      <div class="more-row-label">
-        <div class="profile-avatar">${initials(u.name)}</div>
-        ${escapeHtml(u.name)}
+    <div class="more-row" style="align-items:center;">
+      <div class="more-row-label" style="flex:1;">
+        <div class="profile-avatar" data-switch="${u.id}" style="cursor:pointer;">${initials(u.name)}</div>
+        <input class="field-input" style="padding:8px 10px; font-size:14px; flex:1;" data-rename="${u.id}" value="${escapeHtml(u.name)}">
       </div>
-      ${u.id===state.currentUserId ? '<div style="color:var(--turq); font-size:13px; font-weight:700;">Aktiv</div>' : ''}
+      ${u.id===state.currentUserId ? '<span style="color:var(--turq); font-size:12px; font-weight:700; margin-right:8px;">Aktiv</span>' : `<button class="icon-btn" data-switch-btn="${u.id}" style="flex:0 0 auto; padding:8px 10px; margin-right:8px;">Wechseln</button>`}
+      <button class="icon-btn danger" data-delete="${u.id}" style="flex:0 0 auto; padding:8px 10px;">Löschen</button>
     </div>
   `).join("");
 
   openSheet(`
-    <div class="sheet-title">Profil wechseln</div>
-    <div class="more-group">${rows}</div>
-    <button class="btn-ghost" id="addProfileFromSwitchBtn" style="width:100%; margin-top:6px;">+ Neuen Nutzer hinzufügen</button>
-  `);
-
-  document.querySelectorAll("#sheetRoot .more-row[data-uid]").forEach(row=>{
-    row.addEventListener("click", ()=>{
-      state.currentUserId = row.dataset.uid;
-      saveState();
-      closeSheet();
-      refreshHeader();
-      renderCurrentView();
-    });
-  });
-  document.getElementById("addProfileFromSwitchBtn").addEventListener("click", ()=>{
-    closeSheet();
-    setTimeout(()=>openAddUserSheet(true), 180);
-  });
-}
-
-function openManageUsersSheet(){
-  if(state.users.length >= 3){
-    renderManageUsersList();
-    return;
-  }
-  renderManageUsersList();
-}
-
-function renderManageUsersList(){
-  const rows = state.users.map(u => `
-    <div class="more-row">
-      <div class="more-row-label">
-        <div class="profile-avatar">${initials(u.name)}</div>
-        <input class="field-input" style="padding:8px 10px; font-size:14px; width:140px;" data-rename="${u.id}" value="${escapeHtml(u.name)}">
-      </div>
-      ${u.id===state.currentUserId ? '<span style="color:var(--turq); font-size:12px; font-weight:700;">Aktiv</span>' : ''}
-    </div>
-  `).join("");
-
-  openSheet(`
-    <div class="sheet-title">Nutzer verwalten</div>
-    <div class="more-group">${rows}</div>
-    ${state.users.length < 3 ? `<button class="btn-ghost" id="addUserBtn" style="width:100%;">+ Neuen Nutzer hinzufügen</button>` : `<div class="detail-text" style="text-align:center;">Maximal 3 Profile.</div>`}
+    <div class="sheet-title">👥 Mitglieder</div>
+    <div class="detail-text" style="margin-bottom:16px;">Zeigt nur Profile, die auf diesem Gerät erstellt wurden — es gibt keine Synchronisation zwischen verschiedenen Handys.</div>
+    <div class="more-group" id="membersRows">${rows}</div>
+    <div class="detail-text" style="text-align:center; margin-top:14px; font-size:12.5px;">Pro Gerät ist nur ein eigenes Profil vorgesehen. Neue Freunde legen ihr Profil auf ihrem eigenen Gerät an.</div>
   `);
 
   document.querySelectorAll("[data-rename]").forEach(inp=>{
@@ -1607,31 +1675,50 @@ function renderManageUsersList(){
       if(u && inp.value.trim()){ u.name = inp.value.trim(); saveState(); refreshHeader(); }
     });
   });
-  const addBtn = document.getElementById("addUserBtn");
-  if(addBtn) addBtn.addEventListener("click", ()=>{ closeSheet(); setTimeout(()=>openAddUserSheet(false), 180); });
+  document.querySelectorAll("[data-switch], [data-switch-btn]").forEach(elm=>{
+    elm.addEventListener("click", ()=>{
+      const targetId = elm.dataset.switch || elm.dataset.switchBtn;
+      state.currentUserId = targetId;
+      saveState();
+      refreshHeader();
+      renderCurrentView();
+      renderMembersList();
+    });
+  });
+  document.querySelectorAll("[data-delete]").forEach(btn=>{
+    btn.addEventListener("click", ()=> confirmDeleteMember(btn.dataset.delete));
+  });
 }
 
-function openAddUserSheet(switchAfter){
+function confirmDeleteMember(userId){
+  const u = userById(userId);
+  if(!u) return;
   openSheet(`
-    <div class="sheet-title">Neuer Nutzer</div>
-    <div class="field-label">Name</div>
-    <input class="field-input" id="newUserNameInput" placeholder="Name" maxlength="16">
+    <div class="sheet-title">${escapeHtml(u.name)} löschen?</div>
+    <div class="detail-text" style="margin-bottom:20px;">Das Profil wird von diesem Gerät entfernt. Bereits erstellte Ideen und Bewertungen bleiben erhalten, zeigen aber keinen Ersteller mehr an.</div>
     <div class="sheet-btn-row">
-      <button class="btn-primary" id="saveNewUserBtn">Hinzufügen</button>
+      <button class="btn-ghost" id="cancelDelMemberBtn" style="width:100%;">Abbrechen</button>
+      <button class="btn-primary" id="confirmDelMemberBtn" style="background:linear-gradient(120deg, var(--danger), #c94764);">Löschen</button>
     </div>
   `);
-  document.getElementById("saveNewUserBtn").addEventListener("click", ()=>{
-    const name = document.getElementById("newUserNameInput").value.trim();
-    if(!name){ showToast("Bitte einen Namen eingeben."); return; }
-    if(state.users.length >= 3){ showToast("Maximal 3 Profile möglich."); return; }
-    const newUser = { id: uid("user"), name };
-    state.users.push(newUser);
-    if(switchAfter) state.currentUserId = newUser.id;
+  document.getElementById("cancelDelMemberBtn").addEventListener("click", ()=>{ closeSheet(); setTimeout(renderMembersList, 150); });
+  document.getElementById("confirmDelMemberBtn").addEventListener("click", ()=>{
+    state.users = state.users.filter(x=>x.id!==userId);
+    if(state.currentUserId === userId){
+      state.currentUserId = state.users.length ? state.users[0].id : null;
+    }
     saveState();
     closeSheet();
-    refreshHeader();
-    renderCurrentView();
-    showToast("Nutzer hinzugefügt.");
+    if(!state.currentUserId){
+      // Kein Profil mehr auf diesem Gerät -> zurück zum Onboarding
+      document.getElementById("app").classList.add("hidden");
+      document.getElementById("bottomNav").classList.add("hidden");
+      document.getElementById("onboarding").classList.remove("hidden");
+      initOnboarding();
+    } else {
+      refreshHeader();
+      renderCurrentView();
+    }
   });
 }
 
@@ -1713,17 +1800,33 @@ function openStatsSheet(){
 }
 
 function openSettingsSheet(){
+  const u = currentUser();
   openSheet(`
     <div class="sheet-title">⚙️ Einstellungen</div>
 
-    <div class="quick-toggle">
+    <div class="field-label">Dein Name</div>
+    <input class="field-input" id="ownNameInput" value="${u?escapeHtml(u.name):""}" maxlength="16">
+    <div class="sheet-btn-row" style="margin-top:10px;">
+      <button class="btn-primary" id="saveOwnNameBtn">Namen speichern</button>
+    </div>
+
+    <div class="quick-toggle" style="margin-top:22px;">
       <div class="toggle-text">🌙 Dark Mode</div>
       <label class="switch">
-        <input type="checkbox" checked disabled>
+        <input type="checkbox" id="themeToggle" ${state.settings.theme === "dark" ? "checked" : ""}>
         <span class="slider-toggle"></span>
       </label>
     </div>
-    <div class="detail-text" style="margin:8px 0 20px;">SIDEQUEST ist dauerhaft im Dark Mode gestaltet.</div>
+    <div class="detail-text" style="margin:8px 0 20px;">Hell oder dunkel — wie es euch lieber ist.</div>
+
+    <div class="quick-toggle">
+      <div class="toggle-text">🔔 Erinnerung anzeigen</div>
+      <label class="switch">
+        <input type="checkbox" id="notifToggle" ${state.settings.notificationsEnabled ? "checked" : ""}>
+        <span class="slider-toggle"></span>
+      </label>
+    </div>
+    <div class="detail-text" style="margin:8px 0 20px;">Zeigt beim Öffnen der App eine Browser-Benachrichtigung, wenn seit ${REMINDER_THRESHOLD_DAYS} Tagen keine Sidequest mehr gemacht wurde. Funktioniert nur, während ihr die App öffnet — echte Push-Benachrichtigungen auf dem gesperrten Bildschirm bräuchten einen eigenen Server, den diese App bewusst nicht hat.</div>
 
     <button class="btn-ghost" id="resetDataBtn" style="width:100%; color:var(--danger); border-color:var(--danger-soft);">Alle Daten zurücksetzen</button>
 
@@ -1732,6 +1835,38 @@ function openSettingsSheet(){
       <div class="detail-text">SIDEQUEST · Version 1.0<br>Alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert.</div>
     </div>
   `);
+
+  document.getElementById("saveOwnNameBtn").addEventListener("click", ()=>{
+    const name = document.getElementById("ownNameInput").value.trim();
+    if(!name){ showToast("Bitte einen Namen eingeben."); return; }
+    const me = currentUser();
+    if(me){ me.name = name; saveState(); refreshHeader(); showToast("Name aktualisiert."); }
+  });
+
+  document.getElementById("themeToggle").addEventListener("change", (e)=>{
+    state.settings.theme = e.target.checked ? "dark" : "light";
+    saveState();
+    applyTheme();
+  });
+
+  document.getElementById("notifToggle").addEventListener("change", async (e)=>{
+    if(e.target.checked){
+      if(!("Notification" in window)){
+        showToast("Dieser Browser unterstützt keine Benachrichtigungen.");
+        e.target.checked = false;
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if(perm !== "granted"){
+        showToast("Berechtigung nicht erteilt.");
+        e.target.checked = false;
+        return;
+      }
+    }
+    state.settings.notificationsEnabled = e.target.checked;
+    saveState();
+  });
+
   document.getElementById("resetDataBtn").addEventListener("click", confirmResetData);
 }
 
@@ -1928,6 +2063,18 @@ function renderOnboardingProfiles(){
     });
     wrap.appendChild(chip);
   });
+
+  // Ein Gerät = ein Profil: Ist auf diesem Gerät bereits ein Profil vorhanden,
+  // kann kein weiteres neu angelegt werden — nur ein bestehendes ausgewählt.
+  const newWrap = document.getElementById("onbNewProfileWrap");
+  const label = document.getElementById("onbLabel");
+  if(state.users.length > 0){
+    newWrap.classList.add("hidden");
+    label.textContent = "Dieses Gerät kennt bereits ein Profil";
+  } else {
+    newWrap.classList.remove("hidden");
+    label.textContent = "Wähle deinen Namen";
+  }
 }
 
 function initOnboarding(){
@@ -1935,6 +2082,7 @@ function initOnboarding(){
   const input = document.getElementById("onbNameInput");
   const btn = document.getElementById("onbContinueBtn");
   btn.addEventListener("click", ()=>{
+    if(state.users.length > 0) return; // Sicherheitsnetz: kein Zweitprofil pro Gerät
     const name = input.value.trim();
     if(!name){ showToast("Bitte einen Namen eingeben."); return; }
     const newUser = { id: uid("user"), name };
@@ -1956,6 +2104,25 @@ function enterApp(){
   document.getElementById("bottomNav").classList.remove("hidden");
   refreshHeader();
   goToView("draw");
+  maybeShowReminderNotification();
+}
+
+/* Best-effort-Erinnerung: Eine echte Push-Benachrichtigung auf dem Sperr-
+   bildschirm — auch während die App geschlossen ist — würde einen eigenen
+   Server voraussetzen (Web Push mit VAPID-Keys + Service Worker + Server,
+   der zum richtigen Zeitpunkt anstößt). Das widerspricht dem "kein Backend"-
+   Prinzip dieser App. Was OHNE Server geht: eine Browser-Benachrichtigung,
+   die genau in dem Moment ausgelöst wird, in dem die App geöffnet wird —
+   das ist hier umgesetzt. */
+function maybeShowReminderNotification(){
+  if(!state.settings.notificationsEnabled) return;
+  if(!("Notification" in window) || Notification.permission !== "granted") return;
+  if(daysSinceLastActivity() < REMINDER_THRESHOLD_DAYS) return;
+  try{
+    new Notification("SIDEQUEST", {
+      body: `Es ist schon ${daysSinceLastActivity()} Tage her seit eurer letzten Sidequest. Zeit für was Neues?`
+    });
+  }catch(e){ console.warn("Benachrichtigung konnte nicht angezeigt werden:", e); }
 }
 
 /* ============================================================
