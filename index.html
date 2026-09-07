@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>SIDEQUEST</title>
+<style>
+/* ============================================================
+   SIDEQUEST — Design Tokens
+   Dunkel, ruhig, leicht mysteriös. Akzente: Violett / Türkis.
+   Sterne immer Gold. Große Touch-Flächen, kein Schnickschnack.
+   ============================================================ */
+:root{
+  --bg:#0b0c11;
+  --bg-soft:#101219;
+  --card:#171922;
+  --card-2:#1d2029;
+  --card-hover:#22252f;
+  --border:rgba(255,255,255,0.07);
+  --border-strong:rgba(255,255,255,0.14);
+  --text:#eef0f6;
+  --text-dim:#9498a8;
+  --text-faint:#61657a;
+  --violet:#8f7bf7;
+  --violet-soft:rgba(143,123,247,0.14);
+  --turq:#3fd1c4;
+  --turq-soft:rgba(63,209,196,0.14);
+  --green:#6fcf97;
+  --gold:#f4c142;
+  --gold-dim:rgba(244,193,66,0.28);
+  --danger:#e2637f;
+  --danger-soft:rgba(226,99,127,0.14);
+  --r-xl:26px;
+  --r-lg:20px;
+  --r-md:14px;
+  --r-sm:10px;
+  --shadow:0 12px 30px -12px rgba(0,0,0,0.55);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(143,123,247,0.10), transparent 45%),
+    radial-gradient(circle at 90% 15%, rgba(63,209,196,0.07), transparent 40%),
+    var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none;
+  min-height:100vh;
+}
+button{font-family:inherit;}
+input,textarea,select{font-family:inherit;}
+::selection{background:var(--violet-soft);}
+a{color:inherit;}
+
+.hidden{display:none !important;}
+.app-shell{
+  max-width:520px;
+  margin:0 auto;
+  min-height:100vh;
+  position:relative;
+  padding-bottom:calc(84px + var(--safe-bottom));
+}
+
+/* ---------- scrollbar ---------- */
+::-webkit-scrollbar{width:0;height:0;}
+
+/* ============================================================
+   ONBOARDING
+   ============================================================ */
+#onboarding{
+  position:fixed; inset:0; z-index:200;
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  padding:32px 28px calc(32px + var(--safe-bottom));
+  background:
+    radial-gradient(circle at 20% 10%, rgba(143,123,247,0.16), transparent 50%),
+    radial-gradient(circle at 85% 85%, rgba(63,209,196,0.12), transparent 45%),
+    var(--bg);
+}
+.onb-mark{
+  font-size:13px; letter-spacing:0.34em; color:var(--turq); font-weight:600; margin-bottom:18px;
+}
+.onb-title{
+  font-size:44px; font-weight:800; letter-spacing:-0.02em; line-height:1.02;
+  background:linear-gradient(120deg,#fff, #b9adfb 60%, var(--turq));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  margin:0 0 10px;
+}
+.onb-sub{ color:var(--text-dim); font-size:16px; margin-bottom:44px; }
+.onb-card{
+  width:100%; max-width:360px;
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r-xl);
+  padding:26px 22px; box-shadow:var(--shadow);
+}
+.onb-label{ font-size:13px; color:var(--text-faint); margin-bottom:10px; letter-spacing:0.02em;}
+.onb-input{
+  width:100%; background:var(--bg-soft); border:1px solid var(--border-strong);
+  border-radius:var(--r-md); padding:15px 16px; color:var(--text); font-size:17px;
+  outline:none; margin-bottom:18px;
+}
+.onb-input:focus{ border-color:var(--violet); }
+.onb-profiles{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;}
+.onb-profile-chip{
+  padding:9px 14px; border-radius:999px; background:var(--card-2); border:1px solid var(--border);
+  color:var(--text-dim); font-size:14px; cursor:pointer;
+}
+.onb-profile-chip:active{ background:var(--card-hover); }
+.btn-primary{
+  width:100%; border:none; border-radius:var(--r-md); padding:16px;
+  background:linear-gradient(120deg, var(--violet), #6f5ff2);
+  color:#fff; font-size:16px; font-weight:700; letter-spacing:0.02em;
+  cursor:pointer; box-shadow:0 10px 24px -10px rgba(143,123,247,0.55);
+}
+.btn-primary:active{ transform:scale(0.98); }
+.btn-primary:disabled{ opacity:0.4; box-shadow:none; }
+
+/* ============================================================
+   TOP HEADER
+   ============================================================ */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:calc(18px + var(--safe-top)) 20px 12px;
+}
+.brand{ display:flex; flex-direction:column; }
+.brand-name{ font-size:12px; letter-spacing:0.3em; color:var(--turq); font-weight:700; }
+.brand-line{ font-size:13px; color:var(--text-faint); margin-top:2px; }
+.profile-pill{
+  display:flex; align-items:center; gap:8px; background:var(--card);
+  border:1px solid var(--border); padding:7px 12px 7px 7px; border-radius:999px; cursor:pointer;
+}
+.profile-avatar{
+  width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, var(--violet), var(--turq)); font-size:12px; font-weight:800; color:#0b0c11;
+}
+.profile-pill-name{ font-size:13.5px; color:var(--text-dim); font-weight:600; }
+
+.view{ padding:4px 20px 26px; animation:fadein 0.25s ease; }
+@keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+/* ============================================================
+   DRAW VIEW
+   ============================================================ */
+.hero-title{ font-size:26px; font-weight:800; letter-spacing:-0.01em; margin:6px 0 2px; }
+.hero-sub{ color:var(--text-dim); font-size:14.5px; margin-bottom:20px; }
+
+.filter-block{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:18px 16px 20px; margin-bottom:16px;
+}
+.filter-heading{ font-size:12px; letter-spacing:0.16em; color:var(--text-faint); font-weight:700; margin-bottom:14px;}
+.filter-group{ margin-bottom:16px; }
+.filter-group:last-child{ margin-bottom:0; }
+.filter-group-label{ font-size:12.5px; color:var(--text-dim); margin-bottom:9px; font-weight:600;}
+.chip-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.chip{
+  padding:9px 14px; border-radius:999px; background:var(--card-2); border:1px solid var(--border);
+  color:var(--text-dim); font-size:13.5px; cursor:pointer; user-select:none; transition:all .15s ease;
+}
+.chip.active{
+  background:var(--violet-soft); border-color:var(--violet); color:#cfc6ff;
+}
+.chip.active.turq{ background:var(--turq-soft); border-color:var(--turq); color:#bdf3ec; }
+
+.slider-wrap{ padding:6px 2px 0; }
+.slider-labels{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-faint); margin-bottom:10px; letter-spacing:0.02em;}
+input[type=range]{
+  -webkit-appearance:none; width:100%; height:4px; border-radius:4px;
+  background:linear-gradient(90deg, var(--turq), var(--violet), var(--danger));
+  outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
+  background:#fff; border:4px solid var(--violet); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.4);
+}
+input[type=range]::-moz-range-thumb{
+  width:24px; height:24px; border-radius:50%; background:#fff; border:4px solid var(--violet); cursor:pointer;
+}
+
+.toggle-row{ display:flex; align-items:center; justify-content:space-between; }
+.toggle-text{ font-size:13.5px; color:var(--text-dim); font-weight:600; }
+.switch{ position:relative; width:46px; height:27px; }
+.switch input{ opacity:0; width:0; height:0; }
+.slider-toggle{
+  position:absolute; inset:0; background:var(--card-2); border:1px solid var(--border-strong);
+  border-radius:999px; cursor:pointer; transition:.2s;
+}
+.slider-toggle::before{
+  content:""; position:absolute; width:19px; height:19px; left:3px; top:3px; border-radius:50%;
+  background:var(--text-faint); transition:.2s;
+}
+.switch input:checked + .slider-toggle{ background:var(--turq-soft); border-color:var(--turq); }
+.switch input:checked + .slider-toggle::before{ transform:translateX(19px); background:var(--turq); }
+
+.draw-btn-wrap{ display:flex; justify-content:center; margin:26px 0 8px; }
+.draw-btn{
+  width:100%; border:none; border-radius:var(--r-xl); padding:20px;
+  background:linear-gradient(120deg, var(--violet), #6f5ff2 55%, var(--turq));
+  color:#fff; font-size:17px; font-weight:800; letter-spacing:0.02em; cursor:pointer;
+  box-shadow:0 16px 32px -14px rgba(143,123,247,0.6);
+  display:flex; align-items:center; justify-content:center; gap:10px;
+}
+.draw-btn:active{ transform:scale(0.97); }
+.draw-btn .dice{ font-size:20px; display:inline-block; }
+.draw-btn.rolling .dice{ animation:spin 0.5s linear infinite; }
+@keyframes spin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+
+/* ---------- quest card ---------- */
+.card-stage{ position:relative; margin-top:14px; min-height:360px; }
+.quest-card{
+  position:relative; background:var(--card); border:1px solid var(--border-strong);
+  border-radius:var(--r-xl); padding:26px 22px 22px; box-shadow:var(--shadow);
+  touch-action:pan-y; user-select:none; cursor:grab;
+  display:flex; flex-direction:column; gap:14px;
+}
+.quest-card:active{ cursor:grabbing; }
+.quest-num{ font-size:11.5px; letter-spacing:0.14em; color:var(--text-faint); font-weight:700;}
+.quest-title{ font-size:23px; font-weight:800; letter-spacing:-0.01em; line-height:1.2; }
+.quest-desc{ font-size:15px; color:var(--text-dim); line-height:1.5; }
+.chip-info-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:2px;}
+.info-chip{
+  font-size:12.5px; padding:6px 11px; border-radius:999px; background:var(--card-2);
+  border:1px solid var(--border); color:var(--text-dim); display:flex; align-items:center; gap:5px;
+}
+.weather-hint{
+  font-size:12.5px; color:#e8cf8f; background:rgba(244,193,66,0.10); border:1px solid var(--gold-dim);
+  border-radius:var(--r-sm); padding:9px 12px; margin-top:2px;
+}
+.swipe-flag{
+  position:absolute; top:22px; padding:6px 14px; border-radius:8px; font-weight:800; font-size:13px;
+  letter-spacing:0.08em; border:2px solid; opacity:0; transform:rotate(-8deg);
+}
+.swipe-flag.left{ left:20px; color:var(--danger); border-color:var(--danger); }
+.swipe-flag.right{ right:20px; color:var(--green); border-color:var(--green); transform:rotate(8deg); }
+
+.card-actions{ display:flex; gap:12px; margin-top:16px; }
+.act-btn{
+  flex:1; border-radius:var(--r-md); padding:15px; font-size:14.5px; font-weight:700; cursor:pointer;
+  border:1px solid var(--border-strong); background:var(--card-2); color:var(--text-dim);
+}
+.act-btn.discard{ color:#f3a9ba; }
+.act-btn.accept{ background:var(--turq-soft); border-color:var(--turq); color:#c9f5ef; }
+.act-btn:active{ transform:scale(0.97); }
+
+/* ---------- active quest ---------- */
+.active-banner{
+  font-size:11.5px; letter-spacing:0.16em; color:var(--turq); font-weight:700; margin-bottom:10px;
+}
+.active-card{
+  background:linear-gradient(160deg, var(--card-2), var(--card));
+  border:1px solid var(--turq); border-radius:var(--r-xl); padding:24px 20px; box-shadow:var(--shadow);
+}
+.active-meta{ font-size:13px; color:var(--text-faint); margin-top:10px; }
+.done-btn{
+  width:100%; margin-top:20px; border:none; border-radius:var(--r-md); padding:16px;
+  background:linear-gradient(120deg, var(--turq), var(--green)); color:#08201c; font-weight:800;
+  font-size:15px; cursor:pointer;
+}
+.done-btn:active{ transform:scale(0.98); }
+
+/* ============================================================
+   EMPTY STATES
+   ============================================================ */
+.empty-state{ text-align:center; padding:50px 10px 20px; }
+.empty-emoji{ font-size:36px; margin-bottom:14px; }
+.empty-title{ font-size:17px; font-weight:700; margin-bottom:6px; }
+.empty-sub{ font-size:14px; color:var(--text-dim); margin-bottom:22px; }
+.empty-actions{ display:flex; flex-direction:column; gap:10px; align-items:center; }
+.btn-ghost{
+  border:1px solid var(--border-strong); background:var(--card-2); color:var(--text);
+  padding:12px 20px; border-radius:999px; font-size:14px; font-weight:600; cursor:pointer; width:100%; max-width:260px;
+}
+
+/* ============================================================
+   LISTS / ARCHIVE / IDEAS
+   ============================================================ */
+.section-head{ display:flex; align-items:baseline; justify-content:space-between; margin:6px 0 16px; }
+.section-title{ font-size:22px; font-weight:800; letter-spacing:-0.01em; }
+.section-count{ font-size:13px; color:var(--text-faint); }
+
+.list-card{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:16px 16px; margin-bottom:12px; cursor:pointer; transition:background .15s;
+}
+.list-card:active{ background:var(--card-hover); }
+.list-card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+.list-card-title{ font-size:16.5px; font-weight:700; }
+.list-card-num{ font-size:11px; color:var(--text-faint); margin-bottom:3px; letter-spacing:0.08em;}
+.list-card-date{ font-size:12.5px; color:var(--text-faint); white-space:nowrap; }
+.list-card-stars{ margin-top:8px; font-size:14px; letter-spacing:1px; }
+.list-card-avg{ font-size:12.5px; color:var(--text-dim); margin-left:8px; }
+.list-card-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+.mini-chip{
+  font-size:11.5px; padding:4px 9px; border-radius:999px; background:var(--card-2);
+  border:1px solid var(--border); color:var(--text-dim);
+}
+.fav-badge{ color:var(--gold); font-size:13px; }
+.waiting-badge{ font-size:11px; color:#e8cf8f; margin-top:6px; }
+
+.fab{
+  position:fixed; right:20px; bottom:calc(96px + var(--safe-bottom)); z-index:40;
+  background:linear-gradient(120deg, var(--violet), var(--turq)); color:#fff; border:none;
+  border-radius:999px; padding:15px 20px; font-weight:800; font-size:14.5px; box-shadow:0 12px 26px -10px rgba(143,123,247,0.6);
+  cursor:pointer; display:flex; align-items:center; gap:8px;
+}
+.fab:active{ transform:scale(0.96); }
+
+.idea-actions-row{ display:flex; gap:8px; margin-top:12px; }
+.icon-btn{
+  border:1px solid var(--border-strong); background:var(--card-2); color:var(--text-dim);
+  border-radius:var(--r-sm); padding:8px 12px; font-size:12.5px; cursor:pointer; flex:1; text-align:center;
+}
+.icon-btn.danger{ color:var(--danger); }
+.icon-btn.fav-on{ color:var(--gold); border-color:var(--gold-dim); background:rgba(244,193,66,0.08); }
+
+.ai-box{
+  background:var(--card); border:1px dashed var(--border-strong); border-radius:var(--r-lg);
+  padding:20px; text-align:center; margin-bottom:20px;
+}
+.ai-box-title{ font-weight:800; font-size:15.5px; margin-bottom:6px; }
+.ai-box-sub{ font-size:13.5px; color:var(--text-dim); margin-bottom:16px; }
+
+/* ============================================================
+   MORE VIEW
+   ============================================================ */
+.more-group{ background:var(--card); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:16px;}
+.more-row{
+  display:flex; align-items:center; justify-content:space-between; padding:16px 16px;
+  border-bottom:1px solid var(--border); cursor:pointer;
+}
+.more-row:last-child{ border-bottom:none; }
+.more-row:active{ background:var(--card-hover); }
+.more-row-label{ display:flex; align-items:center; gap:12px; font-size:15px; font-weight:600; }
+.more-row-chevron{ color:var(--text-faint); }
+.more-row-sub{ font-size:12.5px; color:var(--text-faint); }
+
+.stat-card{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:18px; margin-bottom:12px;
+}
+.stat-line{ font-size:14.5px; color:var(--text-dim); line-height:1.7; }
+.stat-line b{ color:var(--text); }
+
+.recap-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+.recap-tile{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r-lg); padding:18px 14px;
+}
+.recap-num{ font-size:26px; font-weight:800; background:linear-gradient(120deg,#fff,var(--turq)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.recap-label{ font-size:12px; color:var(--text-faint); margin-top:4px; }
+
+/* ============================================================
+   BOTTOM NAV
+   ============================================================ */
+.bottom-nav{
+  position:fixed; left:0; right:0; bottom:0; z-index:60;
+  max-width:520px; margin:0 auto;
+  background:rgba(16,18,25,0.92); backdrop-filter:blur(14px);
+  border-top:1px solid var(--border);
+  display:flex; padding:10px 6px calc(10px + var(--safe-bottom));
+}
+.nav-btn{
+  flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:4px;
+  color:var(--text-faint); font-size:11px; font-weight:600; padding:6px 0; cursor:pointer; border-radius:12px;
+}
+.nav-btn .nav-icon{ font-size:20px; }
+.nav-btn.active{ color:var(--turq); }
+.nav-btn.active .nav-icon{ filter:drop-shadow(0 0 8px rgba(63,209,196,0.5)); }
+
+/* ============================================================
+   MODAL / SHEET
+   ============================================================ */
+.sheet-backdrop{
+  position:fixed; inset:0; background:rgba(4,5,8,0.6); backdrop-filter:blur(2px); z-index:150;
+  display:flex; align-items:flex-end; justify-content:center;
+  animation:fadein 0.15s ease;
+}
+.sheet{
+  width:100%; max-width:520px; background:var(--bg-soft); border-radius:24px 24px 0 0;
+  border:1px solid var(--border-strong); border-bottom:none;
+  max-height:88vh; overflow-y:auto; padding:20px 20px calc(28px + var(--safe-bottom));
+  animation:sheetup 0.22s cubic-bezier(.22,1,.36,1);
+}
+@keyframes sheetup{ from{transform:translateY(100%);} to{transform:translateY(0);} }
+.sheet-handle{ width:38px; height:4px; background:var(--border-strong); border-radius:4px; margin:0 auto 16px; }
+.sheet-title{ font-size:19px; font-weight:800; margin-bottom:18px; }
+.field-label{ font-size:12.5px; color:var(--text-faint); margin:14px 0 8px; font-weight:600; }
+.field-input, .field-textarea{
+  width:100%; background:var(--card); border:1px solid var(--border-strong); border-radius:var(--r-md);
+  padding:13px 14px; color:var(--text); font-size:15px; outline:none;
+}
+.field-input:focus, .field-textarea:focus{ border-color:var(--violet); }
+.field-textarea{ resize:none; min-height:78px; line-height:1.4; }
+.sheet-close{
+  position:absolute; top:16px; right:16px; background:var(--card-2); border:1px solid var(--border);
+  width:32px; height:32px; border-radius:50%; color:var(--text-dim); font-size:15px; cursor:pointer;
+}
+.sheet-btn-row{ display:flex; gap:10px; margin-top:22px; }
+.quick-toggle{
+  display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r-md); padding:13px 14px; margin-top:14px;
+}
+
+/* star picker */
+.star-picker{ display:flex; gap:2px; position:relative; }
+.star-picker .star{ font-size:30px; color:var(--card-2); position:relative; width:32px; text-align:center; cursor:pointer; }
+.star-picker .star .fill-half, .star-picker .star .fill-full{
+  position:absolute; top:0; left:0; overflow:hidden; color:var(--gold); pointer-events:none;
+}
+.rate-row{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border); }
+.rate-row:last-of-type{ border-bottom:none; }
+.rate-name{ font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.rate-val{ font-size:12.5px; color:var(--text-faint); min-width:30px; text-align:right; }
+
+.toast{
+  position:fixed; left:50%; bottom:calc(100px + var(--safe-bottom)); transform:translateX(-50%);
+  background:var(--card-2); border:1px solid var(--border-strong); color:var(--text);
+  padding:12px 20px; border-radius:999px; font-size:13.5px; font-weight:600; z-index:300;
+  box-shadow:var(--shadow); animation:toastin 0.2s ease;
+}
+@keyframes toastin{ from{opacity:0; transform:translate(-50%,10px);} to{opacity:1; transform:translate(-50%,0);} }
+
+.detail-block{ margin-bottom:18px; }
+.detail-label{ font-size:11.5px; letter-spacing:0.1em; color:var(--text-faint); font-weight:700; margin-bottom:6px; }
+.detail-text{ font-size:14.5px; color:var(--text-dim); line-height:1.55; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     ONBOARDING SCREEN
+     ============================================================ -->
+<div id="onboarding">
+  <div class="onb-mark">SIDEQUEST</div>
+  <div class="onb-title">Was machen<br>wir heute?</div>
+  <div class="onb-sub">Euer gemeinsamer Pool an Ideen.</div>
+  <div class="onb-card">
+    <div class="onb-label">Wähle deinen Namen</div>
+    <div id="onbProfiles" class="onb-profiles"></div>
+    <input id="onbNameInput" class="onb-input" type="text" placeholder="Name" maxlength="16">
+    <button id="onbContinueBtn" class="btn-primary">WEITER</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     MAIN APP SHELL
+     ============================================================ -->
+<div id="app" class="app-shell hidden">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-name">SIDEQUEST</div>
+      <div class="brand-line" id="topDateLine">Heute</div>
+    </div>
+    <div class="profile-pill" id="profilePill">
+      <div class="profile-avatar" id="profileAvatar">J</div>
+      <div class="profile-pill-name" id="profileName">Jona</div>
+    </div>
+  </div>
+
+  <!-- ---------------- VIEW: ZIEHEN ---------------- -->
+  <div id="view-draw" class="view">
+    <!-- populated by renderDrawView() -->
+  </div>
+
+  <!-- ---------------- VIEW: ERLEBT ---------------- -->
+  <div id="view-archive" class="view hidden">
+    <!-- populated by renderArchiveView() -->
+  </div>
+
+  <!-- ---------------- VIEW: IDEEN ---------------- -->
+  <div id="view-ideas" class="view hidden">
+    <!-- populated by renderIdeasView() -->
+  </div>
+
+  <!-- ---------------- VIEW: MEHR ---------------- -->
+  <div id="view-more" class="view hidden">
+    <!-- populated by renderMoreView() -->
+  </div>
+
+</div>
+
+<!-- ============================================================
+     BOTTOM NAVIGATION
+     ============================================================ -->
+<div id="bottomNav" class="bottom-nav hidden">
+  <button class="nav-btn active" data-view="draw"><span class="nav-icon">🎲</span>Ziehen</button>
+  <button class="nav-btn" data-view="archive"><span class="nav-icon">📖</span>Erlebt</button>
+  <button class="nav-btn" data-view="ideas"><span class="nav-icon">💡</span>Ideen</button>
+  <button class="nav-btn" data-view="more"><span class="nav-icon">⚙️</span>Mehr</button>
+</div>
+
+<!-- ============================================================
+     SHEET / MODAL ROOT (dynamisch befüllt)
+     ============================================================ -->
+<div id="sheetRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   1. STATE & PERSISTENZ
+   ============================================================ */
+const STORAGE_KEY = "sidequest_data_v1";
+
+const CATEGORIES = ["Abenteuer","Essen","Sport","Film","Gaming","Kreativ","Stadt","Zuhause","Quatsch","Sonstiges"];
+const CATEGORY_ICON = {Abenteuer:"🧭",Essen:"🍕",Sport:"⚽",Film:"🎬",Gaming:"🎮",Kreativ:"🎨",Stadt:"🏙️",Zuhause:"🏠",Quatsch:"🌀",Sonstiges:"✨"};
+const DURATIONS = [
+  {id:"short", label:"< 1 h"},
+  {id:"medium", label:"1–2 h"},
+  {id:"long", label:"2–4 h"},
+  {id:"verylong", label:"4+ h"},
+  {id:"any", label:"Egal"}
+];
+const DURATION_LABEL = {short:"< 1 h", medium:"1–2 h", long:"2–4 h", verylong:"4+ h", any:"Egal"};
+const LOCATIONS = [
+  {id:"indoor", label:"Indoor"},
+  {id:"outdoor", label:"Outdoor"},
+  {id:"any", label:"Egal"}
+];
+const LOCATION_ICON = {indoor:"🏠", outdoor:"🌙", any:"🌗"};
+const LOCATION_LABEL = {indoor:"Indoor", outdoor:"Outdoor", any:"Egal"};
+
+// Seed-Ideenpool: 18 abwechslungsreiche Beispiel-Sidequests
+const SEED_IDEAS = [
+  {title:"Nachtspaziergang", desc:"Sucht euch gemeinsam einen Ort in eurer Umgebung aus, an dem keiner von euch bisher war.", category:"Abenteuer", duration:"medium", location:"outdoor", adventure:3},
+  {title:"Neuer Fußballplatz", desc:"Findet einen Bolzplatz, auf dem ihr noch nie gespielt habt, und testet ihn.", category:"Sport", duration:"medium", location:"outdoor", adventure:2},
+  {title:"Jeder kocht für die anderen", desc:"Jeder bringt eine Zutat mit, keiner weiß was die anderen mitbringen. Improvisiert ein Gericht.", category:"Essen", duration:"long", location:"indoor", adventure:2},
+  {title:"Blindverkostung", desc:"Verbindet euch die Augen und ratet Snacks, Getränke oder Gewürze.", category:"Quatsch", duration:"short", location:"indoor", adventure:1},
+  {title:"Filmmarathon nach Zufall", desc:"Jeder schlägt einen Film vor, ein Zufallsgenerator entscheidet die Reihenfolge.", category:"Film", duration:"verylong", location:"indoor", adventure:1},
+  {title:"Skate- oder Rollerpark testen", desc:"Auch ohne Skills — einfach mal ausprobieren und dabei filmen.", category:"Sport", duration:"medium", location:"outdoor", adventure:3},
+  {title:"Geocaching-Runde", desc:"Sucht euch online 2–3 Caches in der Nähe und macht eine kleine Schnitzeljagd.", category:"Abenteuer", duration:"medium", location:"outdoor", adventure:3},
+  {title:"Eigener Kurzfilm in 60 Minuten", desc:"Dreht mit dem Handy einen 1-Minuten-Film zu einem zufälligen Wort.", category:"Film", duration:"medium", location:"any", adventure:2},
+  {title:"Brettspiel-Turnier", desc:"Holt drei Spiele raus und spielt ein kleines Mini-Turnier mit Tabelle.", category:"Gaming", duration:"long", location:"indoor", adventure:1},
+  {title:"Flohmarkt-Challenge", desc:"Jeder hat 5 Euro Budget und muss das lustigste Teil auf dem Flohmarkt finden.", category:"Stadt", duration:"long", location:"outdoor", adventure:2},
+  {title:"Dach oder Hügel mit Aussicht", desc:"Sucht den höchsten legal zugänglichen Punkt in der Nähe und schaut euch den Sonnenuntergang an.", category:"Abenteuer", duration:"medium", location:"outdoor", adventure:3},
+  {title:"Zocker-Nacht", desc:"Ein Spiel, alle zusammen, bis einer aufgibt oder gewinnt.", category:"Gaming", duration:"long", location:"indoor", adventure:1},
+  {title:"Fremde Stadtviertel erkunden", desc:"Fahrt in einen Stadtteil, in dem noch keiner von euch war, und lauft einfach los.", category:"Stadt", duration:"long", location:"outdoor", adventure:3},
+  {title:"Selbstgemachtes Musikvideo", desc:"Wählt einen Song und dreht dazu ein möglichst absurdes Musikvideo.", category:"Kreativ", duration:"medium", location:"any", adventure:3},
+  {title:"Nachtwanderung ohne Ziel", desc:"Lauft einfach los, ohne Ziel, und lasst euch von Zufallsentscheidungen leiten (links/rechts würfeln).", category:"Abenteuer", duration:"long", location:"outdoor", adventure:4},
+  {title:"Kochshow-Battle", desc:"Zwei Teams, gleiche Zutaten, 30 Minuten Zeit. Ein Neutraler bewertet.", category:"Essen", duration:"medium", location:"indoor", adventure:2},
+  {title:"Zeichnen mit geschlossenen Augen", desc:"Jeder zeichnet ein Portrait eines anderen ohne hinzusehen. Ergebnisse vergleichen.", category:"Kreativ", duration:"short", location:"indoor", adventure:1},
+  {title:"Spontane Zugfahrt", desc:"Kauft ein günstiges Ticket zur nächsten unbekannten Stadt und verbringt dort ein paar Stunden.", category:"Abenteuer", duration:"verylong", location:"outdoor", adventure:5},
+];
+
+const AI_QUEST_POOL = [
+  {title:"Karaoke im Wohnzimmer", desc:"Baut euch eine improvisierte Karaoke-Bühne und performt reihum.", category:"Quatsch", duration:"medium", location:"indoor", adventure:2},
+  {title:"Foto-Schnitzeljagd", desc:"Erstellt eine Liste mit 10 kuriosen Dingen, die ihr fotografieren müsst, bevor der Tag endet.", category:"Abenteuer", duration:"long", location:"outdoor", adventure:3},
+  {title:"Kurzgeschichten-Staffel", desc:"Jeder schreibt einen Satz, ohne die ganze Geschichte zu kennen. Am Ende laut vorlesen.", category:"Kreativ", duration:"short", location:"any", adventure:1},
+  {title:"Eiscafé-Tour", desc:"Testet zwei verschiedene Eisdielen in der Stadt und kürt einen Gewinner.", category:"Essen", duration:"short", location:"outdoor", adventure:1},
+  {title:"Trampolinpark oder Kletterhalle", desc:"Sucht die nächste Halle und verbringt dort eine Stunde.", category:"Sport", duration:"medium", location:"indoor", adventure:3},
+  {title:"Sternenhimmel beobachten", desc:"Fahrt raus aus der Stadt, legt euch hin und sucht Sternbilder.", category:"Abenteuer", duration:"medium", location:"outdoor", adventure:2},
+  {title:"Retro-Spieleabend", desc:"Sucht ein altes Konsolenspiel raus, das keiner von euch seit Jahren gespielt hat.", category:"Gaming", duration:"long", location:"indoor", adventure:1},
+  {title:"Perspektivwechsel-Spaziergang", desc:"Lauft eine vertraute Strecke rückwärts oder mit vertauschten Rollen als Local/Tourist.", category:"Quatsch", duration:"short", location:"outdoor", adventure:2},
+  {title:"Mini-Filmfestival", desc:"Jeder bringt einen selbstgedrehten 30-Sekunden-Clip zu einem Thema mit.", category:"Film", duration:"medium", location:"any", adventure:2},
+  {title:"Unbekanntes Restaurant", desc:"Wählt zufällig ein Restaurant aus, in dem keiner von euch je war.", category:"Essen", duration:"medium", location:"outdoor", adventure:3},
+];
+
+let state = null;
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ console.warn("Konnte gespeicherte Daten nicht lesen:", e); }
+  return null;
+}
+
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){ console.warn("Speichern fehlgeschlagen:", e); }
+}
+
+function makeSeedState(){
+  const now = Date.now();
+  let counter = 1;
+  const ideas = SEED_IDEAS.map((s, i) => ({
+    id: "idea_" + (i+1),
+    num: counter++,
+    title: s.title,
+    desc: s.desc,
+    category: s.category,
+    duration: s.duration,
+    location: s.location,
+    adventure: s.adventure,
+    creator: null, // wird nach Nutzererstellung zugewiesen (erster Nutzer)
+    favorite: false,
+    createdAt: now - (Math.floor(Math.random()*20)+1) * 86400000,
+    lastDrawnAt: null
+  }));
+  return {
+    users: [],
+    currentUserId: null,
+    ideas: ideas,
+    activeQuest: null,
+    completedQuests: [],
+    recentlyDrawnIds: [],
+    nextIdeaCounter: counter,
+    nextQuestCounter: 1,
+    settings: { weatherAware: false, darkMode: true },
+    filters: { duration: "any", location: "any", adventure: 3 }
+  };
+}
+
+function ensureState(){
+  state = loadState();
+  if(!state){
+    state = makeSeedState();
+    saveState();
+  }
+  // Migrations-Sicherheit für fehlende Felder
+  if(!state.filters) state.filters = { duration:"any", location:"any", adventure:3 };
+  if(!state.settings) state.settings = { weatherAware:false, darkMode:true };
+  if(!state.recentlyDrawnIds) state.recentlyDrawnIds = [];
+}
+
+function uid(prefix){ return prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+/* ============================================================
+   2. UTILS
+   ============================================================ */
+function fmtDate(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString("de-DE", {day:"2-digit", month:"2-digit", year:"numeric"});
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  return d.toLocaleTimeString("de-DE", {hour:"2-digit", minute:"2-digit"});
+}
+function fmtQuestNum(n){ return "#" + String(n).padStart(3,"0"); }
+function daysSince(ts){ return Math.floor((Date.now()-ts)/86400000); }
+function currentUser(){ return state.users.find(u => u.id === state.currentUserId) || null; }
+function userById(id){ return state.users.find(u => u.id === id); }
+function initials(name){ return (name||"?").trim().charAt(0).toUpperCase(); }
+
+function starString(value){
+  // Gibt gerundete halbe Sterne als Unicode-String zurück (visuell), value 0-5
+  const full = Math.floor(value);
+  const half = (value - full) >= 0.5;
+  let s = "★".repeat(full);
+  if(half) s += "½";
+  s += "☆".repeat(Math.max(0,5 - full - (half?1:0)));
+  return s;
+}
+
+function showToast(msg){
+  const root = document.getElementById("toastRoot");
+  root.innerHTML = "";
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = msg;
+  root.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 1800);
+}
+
+/* Simulierte Wetterlogik (modular, austauschbar gegen echte API) */
+function getSimulatedWeather(){
+  // Deterministisch pro Tag, damit es sich innerhalb eines Tages nicht ändert
+  const dayKey = new Date().toISOString().slice(0,10);
+  let hash = 0;
+  for(let i=0;i<dayKey.length;i++) hash = (hash * 31 + dayKey.charCodeAt(i)) % 997;
+  const bad = (hash % 3) === 0; // ~ jeder 3. Tag "wechselhaft"
+  return { bad: bad, label: bad ? "wechselhaft" : "freundlich" };
+}
+
+/* ============================================================
+   3. AUSWAHL-ALGORITHMUS
+   ============================================================ */
+function durationMatches(ideaDur, filterDur){
+  if(filterDur === "any") return true;
+  if(ideaDur === "any") return true;
+  return ideaDur === filterDur;
+}
+function locationMatches(ideaLoc, filterLoc){
+  if(filterLoc === "any") return true;
+  if(ideaLoc === "any") return true;
+  return ideaLoc === filterLoc;
+}
+
+function scoreIdea(idea, filters, weather){
+  let score = 1;
+  // Abenteuer-Nähe zum Slider (1-5)
+  const dist = Math.abs((idea.adventure||3) - filters.adventure);
+  score *= (1 / (1 + dist)) * 2;
+  // Favoriten leicht bevorzugen
+  if(idea.favorite) score *= 1.6;
+  // Wartezeit im Pool leicht bevorzugen (je länger, desto eher dran)
+  const waited = daysSince(idea.createdAt);
+  if(waited > 30) score *= 1.3;
+  else if(waited > 14) score *= 1.1;
+  // Wetter (nur soft, wenn aktiviert)
+  if(filters.weatherAware && weather.bad && idea.location === "outdoor"){
+    score *= 0.55;
+  }
+  // Kürzlich gezogene stark abwerten (harte Exclude passiert vorher, das hier ist Zusatzsicherheit)
+  return Math.max(score, 0.01);
+}
+
+function pickQuest(){
+  const weather = getSimulatedWeather();
+  const filters = { ...state.filters, weatherAware: state.settings.weatherAware };
+
+  let pool = state.ideas.filter(i =>
+    durationMatches(i.duration, filters.duration) &&
+    locationMatches(i.location, filters.location)
+  );
+
+  // harte Exclude der letzten gezogenen Ideen, falls Pool danach noch übrig bleibt
+  const recentSet = new Set(state.recentlyDrawnIds);
+  const withoutRecent = pool.filter(i => !recentSet.has(i.id));
+  if(withoutRecent.length > 0) pool = withoutRecent;
+
+  if(pool.length === 0) return null;
+
+  const scored = pool.map(i => ({ idea:i, score: scoreIdea(i, filters, weather) }));
+  const total = scored.reduce((a,b)=>a+b.score, 0);
+  let r = Math.random() * total;
+  for(const entry of scored){
+    r -= entry.score;
+    if(r <= 0) return { idea: entry.idea, weather };
+  }
+  return { idea: scored[scored.length-1].idea, weather };
+}
+
+function registerDraw(ideaId){
+  state.ideas.find(i=>i.id===ideaId).lastDrawnAt = Date.now();
+  state.recentlyDrawnIds.push(ideaId);
+  if(state.recentlyDrawnIds.length > 3) state.recentlyDrawnIds.shift();
+  saveState();
+}
+
+/* ============================================================
+   4. RENDER: DRAW VIEW
+   ============================================================ */
+let drawnIdea = null; // aktuell auf der Karte gezeigte Idee (noch nicht angenommen)
+let drawnWeather = null;
+
+function renderDrawView(){
+  const el = document.getElementById("view-draw");
+  const active = state.activeQuest;
+
+  if(active){
+    el.innerHTML = renderActiveQuestHTML(active);
+    bindActiveQuestEvents();
+    return;
+  }
+
+  const u = currentUser();
+  const f = state.filters;
+
+  el.innerHTML = `
+    <div class="hero-title">SIDEQUEST</div>
+    <div class="hero-sub">Was machen wir heute, ${u ? u.name : ""}?</div>
+
+    <div class="filter-block">
+      <div class="filter-heading">EURE FILTER</div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">ZEIT</div>
+        <div class="chip-row" id="chipDuration">
+          ${DURATIONS.map(d => `<div class="chip ${f.duration===d.id?'active':''}" data-val="${d.id}">${d.label}</div>`).join("")}
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">ORT</div>
+        <div class="chip-row" id="chipLocation">
+          ${LOCATIONS.map(l => `<div class="chip turq ${f.location===l.id?'active':''}" data-val="${l.id}">${l.label}</div>`).join("")}
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">ABENTEUER</div>
+        <div class="slider-wrap">
+          <div class="slider-labels"><span>ENTSPANNT</span><span>CHAOTISCH</span></div>
+          <input type="range" id="adventureSlider" min="1" max="5" step="1" value="${f.adventure}">
+        </div>
+      </div>
+
+      <div class="filter-group" style="margin-bottom:0;">
+        <div class="toggle-row">
+          <div class="toggle-text">🌦️ Wetter berücksichtigen</div>
+          <label class="switch">
+            <input type="checkbox" id="weatherToggle" ${state.settings.weatherAware?"checked":""}>
+            <span class="slider-toggle"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="draw-btn-wrap">
+      <button class="draw-btn" id="drawBtn"><span class="dice">🎲</span> SIDEQUEST ZIEHEN</button>
+    </div>
+
+    <div class="card-stage" id="cardStage"></div>
+  `;
+
+  bindDrawFilterEvents();
+
+  if(drawnIdea){
+    renderCardStage();
+  } else {
+    document.getElementById("cardStage").innerHTML = "";
+  }
+}
+
+function bindDrawFilterEvents(){
+  document.querySelectorAll("#chipDuration .chip").forEach(chip=>{
+    chip.addEventListener("click", ()=>{
+      state.filters.duration = chip.dataset.val;
+      saveState();
+      renderDrawView();
+    });
+  });
+  document.querySelectorAll("#chipLocation .chip").forEach(chip=>{
+    chip.addEventListener("click", ()=>{
+      state.filters.location = chip.dataset.val;
+      saveState();
+      renderDrawView();
+    });
+  });
+  const slider = document.getElementById("adventureSlider");
+  if(slider){
+    slider.addEventListener("input", ()=>{
+      state.filters.adventure = parseInt(slider.value,10);
+      saveState();
+    });
+  }
+  const wt = document.getElementById("weatherToggle");
+  if(wt){
+    wt.addEventListener("change", ()=>{
+      state.settings.weatherAware = wt.checked;
+      saveState();
+    });
+  }
+  const drawBtn = document.getElementById("drawBtn");
+  if(drawBtn){
+    drawBtn.addEventListener("click", handleDrawClick);
+  }
+}
+
+function handleDrawClick(){
+  const btn = document.getElementById("drawBtn");
+  btn.classList.add("rolling");
+  btn.disabled = true;
+
+  // kurze "mischende" Animation bevor das Ergebnis feststeht
+  let flashes = 0;
+  const flashPool = state.ideas.slice(0,6);
+  const stage = document.getElementById("cardStage");
+
+  const flashInterval = setInterval(()=>{
+    if(flashPool.length){
+      const r = flashPool[Math.floor(Math.random()*flashPool.length)];
+      stage.innerHTML = `<div class="quest-card" style="opacity:0.5;"><div class="quest-title">${escapeHtml(r.title)}</div></div>`;
+    }
+    flashes++;
+    if(flashes >= 5){
+      clearInterval(flashInterval);
+      finishDraw();
+    }
+  }, 90);
+}
+
+function finishDraw(){
+  const btn = document.getElementById("drawBtn");
+  if(btn){ btn.classList.remove("rolling"); btn.disabled = false; }
+
+  const result = pickQuest();
+  const stage = document.getElementById("cardStage");
+  if(!result){
+    drawnIdea = null;
+    stage.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-emoji">🤷</div>
+        <div class="empty-title">Für diese Kombination habt ihr gerade keine passende Quest.</div>
+        <div class="empty-actions">
+          <button class="btn-ghost" id="loosenFiltersBtn">Filter lockern</button>
+          <button class="btn-ghost" id="aiSurpriseBtnEmpty">🤖 Neue Idee</button>
+        </div>
+      </div>`;
+    document.getElementById("loosenFiltersBtn").addEventListener("click", ()=>{
+      state.filters = { duration:"any", location:"any", adventure: state.filters.adventure };
+      saveState(); renderDrawView();
+    });
+    document.getElementById("aiSurpriseBtnEmpty").addEventListener("click", ()=>{
+      goToView("more"); openAiSurpriseSheet();
+    });
+    return;
+  }
+
+  drawnIdea = result.idea;
+  drawnWeather = result.weather;
+  registerDraw(drawnIdea.id);
+  renderCardStage();
+}
+
+function renderCardStage(){
+  const stage = document.getElementById("cardStage");
+  if(!drawnIdea){ stage.innerHTML = ""; return; }
+  const idea = drawnIdea;
+  const creator = userById(idea.creator);
+  const showWeatherHint = state.settings.weatherAware && drawnWeather && drawnWeather.bad && idea.location === "outdoor";
+
+  stage.innerHTML = `
+    <div class="quest-card" id="questCard">
+      <div class="swipe-flag left" id="flagLeft">WEG</div>
+      <div class="swipe-flag right" id="flagRight">MACHEN</div>
+      <div class="quest-num">SIDEQUEST ${fmtQuestNum(idea.num)}</div>
+      <div class="quest-title">${CATEGORY_ICON[idea.category]||"✨"} ${escapeHtml(idea.title)}</div>
+      <div class="quest-desc">${escapeHtml(idea.desc || "")}</div>
+      <div class="chip-info-row">
+        <div class="info-chip">⏱ ${DURATION_LABEL[idea.duration]}</div>
+        <div class="info-chip">${LOCATION_ICON[idea.location]} ${LOCATION_LABEL[idea.location]}</div>
+        <div class="info-chip">😈 Abenteuer ${idea.adventure}/5</div>
+        ${creator ? `<div class="info-chip">👤 von ${escapeHtml(creator.name)}</div>` : ""}
+        ${idea.favorite ? `<div class="info-chip">🔥 Favorit</div>` : ""}
+      </div>
+      ${showWeatherHint ? `<div class="weather-hint">🌦️ Heute eher wechselhaft – passende Kleidung einpacken.</div>` : ""}
+      <div class="card-actions">
+        <button class="act-btn discard" id="btnDiscard">← Weg</button>
+        <button class="act-btn accept" id="btnAccept">✓ Machen</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("btnDiscard").addEventListener("click", ()=> resolveCard(-1));
+  document.getElementById("btnAccept").addEventListener("click", ()=> resolveCard(1));
+  setupSwipe(document.getElementById("questCard"));
+}
+
+function setupSwipe(cardEl){
+  let startX = 0, startY = 0, dx = 0, dragging = false, pointerId = null;
+  const flagLeft = document.getElementById("flagLeft");
+  const flagRight = document.getElementById("flagRight");
+
+  function onDown(e){
+    dragging = true;
+    pointerId = e.pointerId;
+    cardEl.setPointerCapture(pointerId);
+    startX = e.clientX; startY = e.clientY; dx = 0;
+    cardEl.style.transition = "none";
+  }
+  function onMove(e){
+    if(!dragging) return;
+    dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if(Math.abs(dy) > Math.abs(dx) * 1.4) return; // vertikales Scrollen zulassen
+    const rot = dx / 18;
+    cardEl.style.transform = `translateX(${dx}px) rotate(${rot}deg)`;
+    const progress = Math.min(Math.abs(dx) / 90, 1);
+    if(dx < 0){ flagLeft.style.opacity = progress; flagRight.style.opacity = 0; }
+    else { flagRight.style.opacity = progress; flagLeft.style.opacity = 0; }
+  }
+  function onUp(){
+    if(!dragging) return;
+    dragging = false;
+    cardEl.style.transition = "transform 0.25s ease";
+    if(Math.abs(dx) > 90){
+      resolveCard(dx > 0 ? 1 : -1);
+    } else {
+      cardEl.style.transform = "translateX(0) rotate(0)";
+      flagLeft.style.opacity = 0; flagRight.style.opacity = 0;
+    }
+  }
+
+  cardEl.addEventListener("pointerdown", onDown);
+  cardEl.addEventListener("pointermove", onMove);
+  cardEl.addEventListener("pointerup", onUp);
+  cardEl.addEventListener("pointercancel", onUp);
+}
+
+function resolveCard(direction){
+  const cardEl = document.getElementById("questCard");
+  if(cardEl){
+    cardEl.style.transition = "transform 0.28s ease, opacity 0.28s ease";
+    cardEl.style.transform = `translateX(${direction*520}px) rotate(${direction*22}deg)`;
+    cardEl.style.opacity = "0";
+  }
+  const idea = drawnIdea;
+  setTimeout(()=>{
+    if(direction > 0){
+      acceptQuest(idea);
+    } else {
+      drawnIdea = null;
+      showToast("Weggewischt — bleibt im Ideenpool.");
+      renderDrawView();
+    }
+  }, 220);
+}
+
+function acceptQuest(idea){
+  state.activeQuest = {
+    ideaId: idea.id,
+    startedAt: Date.now(),
+    participants: state.users.map(u=>u.id)
+  };
+  drawnIdea = null;
+  saveState();
+  showToast("SIDEQUEST AKTIV");
+  renderDrawView();
+}
+
+function renderActiveQuestHTML(active){
+  const idea = state.ideas.find(i=>i.id===active.ideaId);
+  if(!idea){
+    state.activeQuest = null; saveState();
+    return `<div class="empty-state"><div class="empty-title">Aktive Quest nicht gefunden.</div></div>`;
+  }
+  const creator = userById(idea.creator);
+  return `
+    <div class="active-banner">AKTUELLE QUEST</div>
+    <div class="active-card">
+      <div class="quest-num">SIDEQUEST ${fmtQuestNum(idea.num)}</div>
+      <div class="quest-title" style="margin-top:6px;">${CATEGORY_ICON[idea.category]||"✨"} ${escapeHtml(idea.title)}</div>
+      <div class="quest-desc" style="margin-top:8px;">${escapeHtml(idea.desc||"")}</div>
+      <div class="chip-info-row" style="margin-top:12px;">
+        <div class="info-chip">⏱ ${DURATION_LABEL[idea.duration]}</div>
+        <div class="info-chip">${LOCATION_ICON[idea.location]} ${LOCATION_LABEL[idea.location]}</div>
+        <div class="info-chip">😈 Abenteuer ${idea.adventure}/5</div>
+      </div>
+      <div class="active-meta">Gestartet am ${fmtDate(active.startedAt)}${creator? " · von "+escapeHtml(creator.name)+" vorgeschlagen":""}</div>
+      <button class="done-btn" id="btnQuestDone">✓ QUEST ERLEDIGT</button>
+    </div>
+  `;
+}
+
+function bindActiveQuestEvents(){
+  const btn = document.getElementById("btnQuestDone");
+  if(btn) btn.addEventListener("click", completeActiveQuest);
+}
+
+function completeActiveQuest(){
+  const active = state.activeQuest;
+  const idea = state.ideas.find(i=>i.id===active.ideaId);
+  const completed = {
+    id: uid("cq"),
+    num: state.nextQuestCounter++,
+    ideaId: idea.id,
+    title: idea.title,
+    desc: idea.desc,
+    category: idea.category,
+    duration: idea.duration,
+    location: idea.location,
+    adventure: idea.adventure,
+    creatorId: idea.creator,
+    participants: active.participants,
+    completedAt: Date.now(),
+    ratings: {} // userId -> {stars, note}
+  };
+  state.completedQuests.unshift(completed);
+  state.activeQuest = null;
+  saveState();
+  openRatingSheet(completed.id);
+  renderDrawView();
+}
+
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str == null ? "" : str;
+  return d.innerHTML;
+}
+
+/* ============================================================
+   5. RENDER: ARCHIVE VIEW (ERLEBT)
+   ============================================================ */
+function renderArchiveView(){
+  const el = document.getElementById("view-archive");
+  const list = state.completedQuests;
+
+  if(list.length === 0){
+    el.innerHTML = `
+      <div class="section-head"><div class="section-title">📖 Erlebt</div></div>
+      <div class="empty-state">
+        <div class="empty-emoji">📖</div>
+        <div class="empty-title">Noch nichts erlebt.</div>
+        <div class="empty-sub">Zieht eure erste Sidequest und kommt hierher zurück.</div>
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="section-head">
+      <div class="section-title">📖 Erlebt</div>
+      <div class="section-count">${list.length} Quest${list.length===1?"":"s"}</div>
+    </div>
+    <div id="archiveList"></div>
+  `;
+  const listEl = document.getElementById("archiveList");
+  list.forEach(cq=>{
+    const ratings = Object.values(cq.ratings||{});
+    const avg = ratings.length ? (ratings.reduce((a,b)=>a+b.stars,0)/ratings.length) : null;
+    const card = document.createElement("div");
+    card.className = "list-card";
+    card.innerHTML = `
+      <div class="list-card-top">
+        <div>
+          <div class="list-card-num">SIDEQUEST ${fmtQuestNum(cq.num)}</div>
+          <div class="list-card-title">${CATEGORY_ICON[cq.category]||"✨"} ${escapeHtml(cq.title)}</div>
+        </div>
+        <div class="list-card-date">${fmtDate(cq.completedAt)}</div>
+      </div>
+      ${avg!==null ? `<div class="list-card-stars">${starString(avg)}<span class="list-card-avg">Ø ${avg.toFixed(2).replace(/0$/,'').replace(/\\.$/,',0')}</span></div>` : `<div class="list-card-avg">Noch nicht bewertet</div>`}
+      <div class="list-card-chips">
+        <div class="mini-chip">⏱ ${DURATION_LABEL[cq.duration]}</div>
+        <div class="mini-chip">${LOCATION_ICON[cq.location]} ${LOCATION_LABEL[cq.location]}</div>
+      </div>
+    `;
+    card.addEventListener("click", ()=> openArchiveDetailSheet(cq.id));
+    listEl.appendChild(card);
+  });
+}
+
+function openArchiveDetailSheet(cqId){
+  const cq = state.completedQuests.find(c=>c.id===cqId);
+  if(!cq) return;
+  const creator = userById(cq.creatorId);
+  const participants = (cq.participants||[]).map(id=>userById(id)).filter(Boolean);
+  const ratingsHtml = state.users.map(u=>{
+    const r = cq.ratings[u.id];
+    return `<div class="rate-row">
+      <div class="rate-name">${escapeHtml(u.name)}</div>
+      <div>${r ? `<span style="color:var(--gold);">${starString(r.stars)}</span>` : `<span style="color:var(--text-faint); font-size:13px;">noch keine Bewertung</span>`}</div>
+    </div>`;
+  }).join("");
+  const notes = state.users.map(u=>{
+    const r = cq.ratings[u.id];
+    if(r && r.note) return `<div class="detail-block"><div class="detail-label">NOTIZ VON ${escapeHtml(u.name.toUpperCase())}</div><div class="detail-text">${escapeHtml(r.note)}</div></div>`;
+    return "";
+  }).join("");
+
+  openSheet(`
+    <div class="sheet-title">SIDEQUEST ${fmtQuestNum(cq.num)}</div>
+    <div class="detail-block">
+      <div class="detail-label">${CATEGORY_ICON[cq.category]||""} ${escapeHtml(cq.title.toUpperCase())}</div>
+      <div class="detail-text">${escapeHtml(cq.desc||"")}</div>
+    </div>
+    <div class="chip-info-row" style="margin-bottom:16px;">
+      <div class="info-chip">⏱ ${DURATION_LABEL[cq.duration]}</div>
+      <div class="info-chip">${LOCATION_ICON[cq.location]} ${LOCATION_LABEL[cq.location]}</div>
+      <div class="info-chip">😈 Abenteuer ${cq.adventure}/5</div>
+    </div>
+    <div class="detail-block">
+      <div class="detail-label">WANN</div>
+      <div class="detail-text">${fmtDate(cq.completedAt)} um ${fmtTime(cq.completedAt)}</div>
+    </div>
+    ${creator ? `<div class="detail-block"><div class="detail-label">IDEE VON</div><div class="detail-text">${escapeHtml(creator.name)}</div></div>` : ""}
+    ${participants.length ? `<div class="detail-block"><div class="detail-label">DABEI</div><div class="detail-text">${participants.map(p=>escapeHtml(p.name)).join(", ")}</div></div>` : ""}
+    <div class="detail-block">
+      <div class="detail-label">BEWERTUNGEN</div>
+      ${ratingsHtml}
+    </div>
+    ${notes}
+    <div class="sheet-btn-row">
+      <button class="btn-ghost" id="editRatingBtn" style="width:100%;">Bewertung bearbeiten</button>
+    </div>
+  `);
+  document.getElementById("editRatingBtn").addEventListener("click", ()=>{
+    closeSheet();
+    setTimeout(()=> openRatingSheet(cq.id), 180);
+  });
+}
+
+/* ============================================================
+   6. RENDER: IDEAS VIEW (IDEENPOOL)
+   ============================================================ */
+let ideasFilterCat = "all";
+
+function renderIdeasView(){
+  const el = document.getElementById("view-ideas");
+  const ideas = state.ideas;
+
+  if(ideas.length === 0){
+    el.innerHTML = `
+      <div class="section-head"><div class="section-title">💡 Ideen</div></div>
+      <div class="empty-state">
+        <div class="empty-emoji">💡</div>
+        <div class="empty-title">Noch keine Sidequests.</div>
+        <div class="empty-sub">Dann wird es Zeit für eine.</div>
+        <div class="empty-actions">
+          <button class="btn-ghost" id="addIdeaEmptyBtn">+ Idee hinzufügen</button>
+          <button class="btn-ghost" id="aiSurpriseEmptyBtn">🤖 Überraschung</button>
+        </div>
+      </div>
+    `;
+    document.getElementById("addIdeaEmptyBtn").addEventListener("click", ()=>openIdeaEditorSheet(null));
+    document.getElementById("aiSurpriseEmptyBtn").addEventListener("click", ()=>openAiSurpriseSheet());
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="section-head">
+      <div>
+        <div class="section-title">💡 Unser Ideenpool</div>
+        <div class="section-count">${ideas.length} Ideen</div>
+      </div>
+    </div>
+    <div class="chip-row" id="catFilterRow" style="margin-bottom:16px;"></div>
+    <div id="ideasList"></div>
+    <div style="height:70px;"></div>
+  `;
+
+  const catRow = document.getElementById("catFilterRow");
+  const cats = ["all", ...CATEGORIES.filter(c => ideas.some(i=>i.category===c))];
+  cats.forEach(c=>{
+    const chip = document.createElement("div");
+    chip.className = "chip" + (ideasFilterCat===c ? " active" : "");
+    chip.textContent = c==="all" ? "Alle" : (CATEGORY_ICON[c]+" "+c);
+    chip.addEventListener("click", ()=>{ ideasFilterCat = c; renderIdeasView(); });
+    catRow.appendChild(chip);
+  });
+
+  const listEl = document.getElementById("ideasList");
+  const filtered = ideas.filter(i => ideasFilterCat==="all" || i.category===ideasFilterCat)
+                        .slice()
+                        .sort((a,b)=> (b.favorite - a.favorite) || (b.createdAt - a.createdAt));
+
+  filtered.forEach(idea=>{
+    const creator = userById(idea.creator);
+    const waited = daysSince(idea.createdAt);
+    const card = document.createElement("div");
+    card.className = "list-card";
+    card.innerHTML = `
+      <div class="list-card-top">
+        <div>
+          <div class="list-card-title">${idea.favorite?'<span class="fav-badge">🔥</span> ':''}${CATEGORY_ICON[idea.category]||"✨"} ${escapeHtml(idea.title)}</div>
+        </div>
+      </div>
+      <div class="list-card-chips">
+        <div class="mini-chip">${idea.category}</div>
+        <div class="mini-chip">⏱ ${DURATION_LABEL[idea.duration]}</div>
+        <div class="mini-chip">${LOCATION_ICON[idea.location]} ${LOCATION_LABEL[idea.location]}</div>
+        ${creator ? `<div class="mini-chip">👤 ${escapeHtml(creator.name)}</div>` : ""}
+      </div>
+      ${waited > 30 ? `<div class="waiting-badge">🔥 wartet seit ${waited} Tagen</div>` : ""}
+      <div class="idea-actions-row">
+        <button class="icon-btn" data-act="edit">Bearbeiten</button>
+        <button class="icon-btn ${idea.favorite?'fav-on':''}" data-act="fav">${idea.favorite?"★ Favorit":"☆ Favorit"}</button>
+        <button class="icon-btn danger" data-act="del">Löschen</button>
+      </div>
+    `;
+    card.querySelector('[data-act="edit"]').addEventListener("click", (e)=>{ e.stopPropagation(); openIdeaEditorSheet(idea.id); });
+    card.querySelector('[data-act="fav"]').addEventListener("click", (e)=>{ e.stopPropagation(); idea.favorite = !idea.favorite; saveState(); renderIdeasView(); });
+    card.querySelector('[data-act="del"]').addEventListener("click", (e)=>{ e.stopPropagation(); confirmDeleteIdea(idea.id); });
+    listEl.appendChild(card);
+  });
+
+  // FAB
+  let fab = document.getElementById("ideasFab");
+  if(!fab){
+    fab = document.createElement("button");
+    fab.className = "fab";
+    fab.id = "ideasFab";
+    fab.innerHTML = "+ IDEE";
+    document.body.appendChild(fab);
+  }
+  fab.classList.remove("hidden");
+  fab.onclick = ()=> openIdeaEditorSheet(null);
+}
+
+function confirmDeleteIdea(ideaId){
+  openSheet(`
+    <div class="sheet-title">Idee löschen?</div>
+    <div class="detail-text" style="margin-bottom:20px;">Das kann nicht rückgängig gemacht werden.</div>
+    <div class="sheet-btn-row">
+      <button class="btn-ghost" id="cancelDelBtn" style="width:100%;">Abbrechen</button>
+      <button class="btn-primary" id="confirmDelBtn" style="background:linear-gradient(120deg, var(--danger), #c94764);">Löschen</button>
+    </div>
+  `);
+  document.getElementById("cancelDelBtn").addEventListener("click", closeSheet);
+  document.getElementById("confirmDelBtn").addEventListener("click", ()=>{
+    state.ideas = state.ideas.filter(i=>i.id!==ideaId);
+    saveState();
+    closeSheet();
+    renderIdeasView();
+  });
+}
+
+function openIdeaEditorSheet(ideaId){
+  const editing = ideaId ? state.ideas.find(i=>i.id===ideaId) : null;
+  let quickMode = !editing;
+
+  openSheet(`
+    <div class="sheet-title">${editing ? "Idee bearbeiten" : "Neue Idee"}</div>
+
+    <div class="field-label">Titel</div>
+    <input class="field-input" id="ideaTitleInput" placeholder="z.B. Nachtspaziergang" value="${editing?escapeHtml(editing.title):""}">
+
+    <div id="quickToggleWrap" class="quick-toggle" style="${editing?'display:none;':''}">
+      <div class="toggle-text">⚡ Schnellidee (nur Titel)</div>
+      <label class="switch">
+        <input type="checkbox" id="quickModeToggle" ${quickMode?"checked":""}>
+        <span class="slider-toggle"></span>
+      </label>
+    </div>
+
+    <div id="fullFieldsWrap" style="${quickMode?'display:none;':''}">
+      <div class="field-label">Beschreibung</div>
+      <textarea class="field-textarea" id="ideaDescInput" placeholder="Kurze Beschreibung...">${editing?escapeHtml(editing.desc||""):""}</textarea>
+
+      <div class="field-label">Kategorie</div>
+      <div class="chip-row" id="ideaCatRow">
+        ${CATEGORIES.map(c=>`<div class="chip ${((editing?editing.category:"Sonstiges")===c)?'active':''}" data-val="${c}">${CATEGORY_ICON[c]} ${c}</div>`).join("")}
+      </div>
+
+      <div class="field-label">Dauer</div>
+      <div class="chip-row" id="ideaDurRow">
+        ${DURATIONS.filter(d=>d.id!=="any").concat([{id:"any",label:"Egal"}]).map(d=>`<div class="chip turq ${((editing?editing.duration:"any")===d.id)?'active':''}" data-val="${d.id}">${d.label}</div>`).join("")}
+      </div>
+
+      <div class="field-label">Ort</div>
+      <div class="chip-row" id="ideaLocRow">
+        ${LOCATIONS.map(l=>`<div class="chip ${((editing?editing.location:"any")===l.id)?'active':''}" data-val="${l.id}">${l.label}</div>`).join("")}
+      </div>
+
+      <div class="field-label">Abenteuer-Level</div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>1</span><span>5</span></div>
+        <input type="range" id="ideaAdvSlider" min="1" max="5" step="1" value="${editing?editing.adventure:2}">
+      </div>
+    </div>
+
+    <div class="sheet-btn-row">
+      <button class="btn-primary" id="saveIdeaBtn">${editing?"Speichern":"Idee hinzufügen"}</button>
+    </div>
+  `);
+
+  const quickToggle = document.getElementById("quickModeToggle");
+  if(quickToggle){
+    quickToggle.addEventListener("change", ()=>{
+      document.getElementById("fullFieldsWrap").style.display = quickToggle.checked ? "none" : "block";
+    });
+  }
+  document.querySelectorAll("#ideaCatRow .chip").forEach(c=>c.addEventListener("click", ()=>{
+    document.querySelectorAll("#ideaCatRow .chip").forEach(x=>x.classList.remove("active"));
+    c.classList.add("active");
+  }));
+  document.querySelectorAll("#ideaDurRow .chip").forEach(c=>c.addEventListener("click", ()=>{
+    document.querySelectorAll("#ideaDurRow .chip").forEach(x=>x.classList.remove("active"));
+    c.classList.add("active");
+  }));
+  document.querySelectorAll("#ideaLocRow .chip").forEach(c=>c.addEventListener("click", ()=>{
+    document.querySelectorAll("#ideaLocRow .chip").forEach(x=>x.classList.remove("active"));
+    c.classList.add("active");
+  }));
+
+  document.getElementById("saveIdeaBtn").addEventListener("click", ()=>{
+    const title = document.getElementById("ideaTitleInput").value.trim();
+    if(!title){ showToast("Bitte einen Titel eingeben."); return; }
+    const isQuick = document.getElementById("quickModeToggle") ? document.getElementById("quickModeToggle").checked : false;
+
+    let desc="", category="Sonstiges", duration="any", location="any", adventure=2;
+    if(!isQuick){
+      desc = document.getElementById("ideaDescInput").value.trim();
+      const catEl = document.querySelector("#ideaCatRow .chip.active");
+      const durEl = document.querySelector("#ideaDurRow .chip.active");
+      const locEl = document.querySelector("#ideaLocRow .chip.active");
+      category = catEl ? catEl.dataset.val : "Sonstiges";
+      duration = durEl ? durEl.dataset.val : "any";
+      location = locEl ? locEl.dataset.val : "any";
+      adventure = parseInt(document.getElementById("ideaAdvSlider").value,10);
+    }
+
+    if(editing){
+      editing.title = title;
+      if(!isQuick){
+        editing.desc = desc; editing.category = category; editing.duration = duration;
+        editing.location = location; editing.adventure = adventure;
+      }
+    } else {
+      state.ideas.push({
+        id: uid("idea"),
+        num: state.nextIdeaCounter++,
+        title, desc, category, duration, location, adventure,
+        creator: state.currentUserId,
+        favorite: false,
+        createdAt: Date.now(),
+        lastDrawnAt: null
+      });
+    }
+    saveState();
+    closeSheet();
+    renderIdeasView();
+    showToast(editing ? "Idee aktualisiert." : "Idee gespeichert.");
+  });
+}
+
+function openAiSurpriseSheet(){
+  const f = state.filters;
+  const candidates = AI_QUEST_POOL.filter(a =>
+    durationMatches(a.duration, f.duration) && locationMatches(a.location, f.location)
+  );
+  const pool = candidates.length ? candidates : AI_QUEST_POOL;
+  const pick = pool[Math.floor(Math.random()*pool.length)];
+
+  openSheet(`
+    <div class="sheet-title">🤖 Neue Idee</div>
+    <div class="detail-block">
+      <div class="detail-label">${CATEGORY_ICON[pick.category]} ${escapeHtml(pick.title.toUpperCase())}</div>
+      <div class="detail-text">${escapeHtml(pick.desc)}</div>
+    </div>
+    <div class="chip-info-row" style="margin-bottom:20px;">
+      <div class="info-chip">⏱ ${DURATION_LABEL[pick.duration]}</div>
+      <div class="info-chip">${LOCATION_ICON[pick.location]} ${LOCATION_LABEL[pick.location]}</div>
+      <div class="info-chip">😈 Abenteuer ${pick.adventure}/5</div>
+    </div>
+    <div class="sheet-btn-row">
+      <button class="btn-ghost" id="rerollAiBtn" style="width:100%;">Nochmal</button>
+      <button class="btn-primary" id="addAiIdeaBtn">Zum Pool hinzufügen</button>
+    </div>
+  `);
+  document.getElementById("rerollAiBtn").addEventListener("click", ()=>{ closeSheet(); setTimeout(openAiSurpriseSheet,150); });
+  document.getElementById("addAiIdeaBtn").addEventListener("click", ()=>{
+    state.ideas.push({
+      id: uid("idea"),
+      num: state.nextIdeaCounter++,
+      title: pick.title, desc: pick.desc, category: pick.category,
+      duration: pick.duration, location: pick.location, adventure: pick.adventure,
+      creator: state.currentUserId, favorite:false, createdAt: Date.now(), lastDrawnAt: null
+    });
+    saveState();
+    closeSheet();
+    showToast("Idee zum Pool hinzugefügt.");
+    if(document.getElementById("view-ideas") && !document.getElementById("view-ideas").classList.contains("hidden")) renderIdeasView();
+  });
+}
+
+/* Platzhalter für spätere echte KI-API-Anbindung.
+   Aktuell: wählt aus lokalem Beispiel-Pool passend zu den Filtern.
+   Kein API-Key im Frontend — bei echter Anbindung würde dies ein
+   Server-Aufruf sein, der hier lediglich das gleiche Objekt zurückgibt. */
+function generateAIQuest(filters){
+  const candidates = AI_QUEST_POOL.filter(a =>
+    durationMatches(a.duration, filters.duration) && locationMatches(a.location, filters.location)
+  );
+  const pool = candidates.length ? candidates : AI_QUEST_POOL;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+/* ============================================================
+   7. RENDER: MORE VIEW (MEHR)
+   ============================================================ */
+function renderMoreView(){
+  const el = document.getElementById("view-more");
+  el.innerHTML = `
+    <div class="section-head"><div class="section-title">⚙️ Mehr</div></div>
+
+    <div class="more-group">
+      <div class="more-row" id="rowSwitchProfile">
+        <div class="more-row-label">👤 Profil wechseln</div>
+        <div class="more-row-chevron">›</div>
+      </div>
+      <div class="more-row" id="rowManageUsers">
+        <div class="more-row-label">👥 Nutzer verwalten</div>
+        <div class="more-row-chevron">›</div>
+      </div>
+      <div class="more-row" id="rowRecap">
+        <div class="more-row-label">📊 Recap</div>
+        <div class="more-row-chevron">›</div>
+      </div>
+      <div class="more-row" id="rowAiIdeas">
+        <div class="more-row-label">🤖 Neue Ideen</div>
+        <div class="more-row-chevron">›</div>
+      </div>
+    </div>
+
+    <div class="more-group">
+      <div class="more-row" id="rowStats">
+        <div class="more-row-label">🤖 Unsere Stats</div>
+        <div class="more-row-chevron">›</div>
+      </div>
+      <div class="more-row" id="rowSettings">
+        <div class="more-row-label">⚙️ Einstellungen</div>
+        <div class="more-row-chevron">›</div>
+      </div>
+    </div>
+
+    <div style="text-align:center; color:var(--text-faint); font-size:12px; margin-top:24px;">
+      SIDEQUEST · lokal &amp; privat auf diesem Gerät
+    </div>
+  `;
+
+  document.getElementById("rowSwitchProfile").addEventListener("click", openSwitchProfileSheet);
+  document.getElementById("rowManageUsers").addEventListener("click", openManageUsersSheet);
+  document.getElementById("rowRecap").addEventListener("click", openRecapSheet);
+  document.getElementById("rowAiIdeas").addEventListener("click", openAiSurpriseSheet);
+  document.getElementById("rowStats").addEventListener("click", openStatsSheet);
+  document.getElementById("rowSettings").addEventListener("click", openSettingsSheet);
+}
+
+function openSwitchProfileSheet(){
+  const rows = state.users.map(u => `
+    <div class="more-row" data-uid="${u.id}" style="cursor:pointer;">
+      <div class="more-row-label">
+        <div class="profile-avatar">${initials(u.name)}</div>
+        ${escapeHtml(u.name)}
+      </div>
+      ${u.id===state.currentUserId ? '<div style="color:var(--turq); font-size:13px; font-weight:700;">Aktiv</div>' : ''}
+    </div>
+  `).join("");
+
+  openSheet(`
+    <div class="sheet-title">Profil wechseln</div>
+    <div class="more-group">${rows}</div>
+    <button class="btn-ghost" id="addProfileFromSwitchBtn" style="width:100%; margin-top:6px;">+ Neuen Nutzer hinzufügen</button>
+  `);
+
+  document.querySelectorAll("#sheetRoot .more-row[data-uid]").forEach(row=>{
+    row.addEventListener("click", ()=>{
+      state.currentUserId = row.dataset.uid;
+      saveState();
+      closeSheet();
+      refreshHeader();
+      renderCurrentView();
+    });
+  });
+  document.getElementById("addProfileFromSwitchBtn").addEventListener("click", ()=>{
+    closeSheet();
+    setTimeout(()=>openAddUserSheet(true), 180);
+  });
+}
+
+function openManageUsersSheet(){
+  if(state.users.length >= 3){
+    renderManageUsersList();
+    return;
+  }
+  renderManageUsersList();
+}
+
+function renderManageUsersList(){
+  const rows = state.users.map(u => `
+    <div class="more-row">
+      <div class="more-row-label">
+        <div class="profile-avatar">${initials(u.name)}</div>
+        <input class="field-input" style="padding:8px 10px; font-size:14px; width:140px;" data-rename="${u.id}" value="${escapeHtml(u.name)}">
+      </div>
+      ${u.id===state.currentUserId ? '<span style="color:var(--turq); font-size:12px; font-weight:700;">Aktiv</span>' : ''}
+    </div>
+  `).join("");
+
+  openSheet(`
+    <div class="sheet-title">Nutzer verwalten</div>
+    <div class="more-group">${rows}</div>
+    ${state.users.length < 3 ? `<button class="btn-ghost" id="addUserBtn" style="width:100%;">+ Neuen Nutzer hinzufügen</button>` : `<div class="detail-text" style="text-align:center;">Maximal 3 Profile.</div>`}
+  `);
+
+  document.querySelectorAll("[data-rename]").forEach(inp=>{
+    inp.addEventListener("change", ()=>{
+      const u = userById(inp.dataset.rename);
+      if(u && inp.value.trim()){ u.name = inp.value.trim(); saveState(); refreshHeader(); }
+    });
+  });
+  const addBtn = document.getElementById("addUserBtn");
+  if(addBtn) addBtn.addEventListener("click", ()=>{ closeSheet(); setTimeout(()=>openAddUserSheet(false), 180); });
+}
+
+function openAddUserSheet(switchAfter){
+  openSheet(`
+    <div class="sheet-title">Neuer Nutzer</div>
+    <div class="field-label">Name</div>
+    <input class="field-input" id="newUserNameInput" placeholder="Name" maxlength="16">
+    <div class="sheet-btn-row">
+      <button class="btn-primary" id="saveNewUserBtn">Hinzufügen</button>
+    </div>
+  `);
+  document.getElementById("saveNewUserBtn").addEventListener("click", ()=>{
+    const name = document.getElementById("newUserNameInput").value.trim();
+    if(!name){ showToast("Bitte einen Namen eingeben."); return; }
+    if(state.users.length >= 3){ showToast("Maximal 3 Profile möglich."); return; }
+    const newUser = { id: uid("user"), name };
+    state.users.push(newUser);
+    if(switchAfter) state.currentUserId = newUser.id;
+    saveState();
+    closeSheet();
+    refreshHeader();
+    renderCurrentView();
+    showToast("Nutzer hinzugefügt.");
+  });
+}
+
+function openRecapSheet(){
+  const cqs = state.completedQuests;
+  const allRatings = [];
+  cqs.forEach(c => Object.values(c.ratings||{}).forEach(r => allRatings.push(r.stars)));
+  const avgRating = allRatings.length ? (allRatings.reduce((a,b)=>a+b,0)/allRatings.length) : 0;
+
+  const durHours = {short:0.5, medium:1.5, long:3, verylong:5, any:1.5};
+  const totalHours = cqs.reduce((a,c)=> a + (durHours[c.duration]||1.5), 0);
+
+  const catCount = {};
+  cqs.forEach(c => catCount[c.category] = (catCount[c.category]||0)+1);
+  const favCat = Object.keys(catCount).sort((a,b)=>catCount[b]-catCount[a])[0];
+
+  let best = null;
+  cqs.forEach(c=>{
+    const rs = Object.values(c.ratings||{});
+    if(!rs.length) return;
+    const avg = rs.reduce((a,b)=>a+b.stars,0)/rs.length;
+    if(!best || avg > best.avg) best = { title:c.title, avg };
+  });
+
+  const creatorCount = {};
+  cqs.forEach(c => { if(c.creatorId) creatorCount[c.creatorId] = (creatorCount[c.creatorId]||0)+1; });
+  const topCreatorId = Object.keys(creatorCount).sort((a,b)=>creatorCount[b]-creatorCount[a])[0];
+  const topCreator = topCreatorId ? userById(topCreatorId) : null;
+
+  openSheet(`
+    <div class="sheet-title">📊 Euer Recap</div>
+    <div class="recap-grid">
+      <div class="recap-tile"><div class="recap-num">${cqs.length}</div><div class="recap-label">Quests erlebt</div></div>
+      <div class="recap-tile"><div class="recap-num">${avgRating ? avgRating.toFixed(1) : "–"}</div><div class="recap-label">Ø Bewertung</div></div>
+      <div class="recap-tile"><div class="recap-num">${totalHours.toFixed(0)}</div><div class="recap-label">gemeinsame Stunden</div></div>
+      <div class="recap-tile"><div class="recap-num">${favCat ? CATEGORY_ICON[favCat] : "–"}</div><div class="recap-label">${favCat || "Lieblingskategorie"}</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-line">Beste Sidequest: <b>${best ? escapeHtml(best.title) : "noch keine Bewertung"}</b></div>
+      <div class="stat-line">Meist vorgeschlagen von: <b>${topCreator ? escapeHtml(topCreator.name) : "–"}</b></div>
+    </div>
+  `);
+}
+
+function openStatsSheet(){
+  const cqs = state.completedQuests;
+  if(cqs.length === 0){
+    openSheet(`
+      <div class="sheet-title">🤖 Unsere Stats</div>
+      <div class="detail-text">Noch nicht genug Daten. Erledigt ein paar Sidequests, dann erscheinen hier eure Muster.</div>
+    `);
+    return;
+  }
+  const locCount = { indoor:0, outdoor:0, any:0 };
+  cqs.forEach(c => locCount[c.location] = (locCount[c.location]||0)+1);
+  const preferredLoc = locCount.outdoor >= locCount.indoor ? "Outdoor" : "Indoor";
+
+  const durHours = {short:0.5, medium:1.5, long:3, verylong:5, any:1.5};
+  const avgDurHours = cqs.reduce((a,c)=>a+(durHours[c.duration]||1.5),0) / cqs.length;
+
+  const catCount = {};
+  cqs.forEach(c => catCount[c.category] = (catCount[c.category]||0)+1);
+  const favCat = Object.keys(catCount).sort((a,b)=>catCount[b]-catCount[a])[0];
+
+  const allRatings = [];
+  cqs.forEach(c => Object.values(c.ratings||{}).forEach(r => allRatings.push(r.stars)));
+  const avgRating = allRatings.length ? (allRatings.reduce((a,b)=>a+b,0)/allRatings.length) : 0;
+
+  openSheet(`
+    <div class="sheet-title">🤖 Unsere Stats</div>
+    <div class="stat-card">
+      <div class="stat-line">Ihr liebt <b>${preferredLoc}</b>-Quests.</div>
+      <div class="stat-line">Eure durchschnittliche Quest dauert <b>${avgDurHours.toFixed(1).replace('.',',')} Stunden</b>.</div>
+      <div class="stat-line"><b>${escapeHtml(favCat||"–")}</b> ist eure häufigste Kategorie.</div>
+      <div class="stat-line">Eure durchschnittliche Bewertung: <b>${avgRating.toFixed(1)} ⭐</b></div>
+    </div>
+    <div class="detail-text" style="text-align:center; color:var(--text-faint); font-size:12.5px;">Einfache Statistik aus euren gespeicherten Daten — keine externe KI im Einsatz.</div>
+  `);
+}
+
+function openSettingsSheet(){
+  openSheet(`
+    <div class="sheet-title">⚙️ Einstellungen</div>
+
+    <div class="quick-toggle">
+      <div class="toggle-text">🌙 Dark Mode</div>
+      <label class="switch">
+        <input type="checkbox" checked disabled>
+        <span class="slider-toggle"></span>
+      </label>
+    </div>
+    <div class="detail-text" style="margin:8px 0 20px;">SIDEQUEST ist dauerhaft im Dark Mode gestaltet.</div>
+
+    <button class="btn-ghost" id="resetDataBtn" style="width:100%; color:var(--danger); border-color:var(--danger-soft);">Alle Daten zurücksetzen</button>
+
+    <div class="detail-block" style="margin-top:24px; text-align:center;">
+      <div class="detail-label">APP-INFO</div>
+      <div class="detail-text">SIDEQUEST · Version 1.0<br>Alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert.</div>
+    </div>
+  `);
+  document.getElementById("resetDataBtn").addEventListener("click", confirmResetData);
+}
+
+function confirmResetData(){
+  openSheet(`
+    <div class="sheet-title">Wirklich alles zurücksetzen?</div>
+    <div class="detail-text" style="margin-bottom:20px;">Alle Nutzer, Ideen, aktiven und erledigten Quests werden unwiderruflich gelöscht.</div>
+    <div class="sheet-btn-row">
+      <button class="btn-ghost" id="cancelResetBtn" style="width:100%;">Abbrechen</button>
+      <button class="btn-primary" id="confirmResetBtn" style="background:linear-gradient(120deg, var(--danger), #c94764);">Zurücksetzen</button>
+    </div>
+  `);
+  document.getElementById("cancelResetBtn").addEventListener("click", closeSheet);
+  document.getElementById("confirmResetBtn").addEventListener("click", ()=>{
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  });
+}
+
+/* ============================================================
+   8. BEWERTUNG (halbe Sterne, touch-freundlich)
+   ============================================================ */
+function buildStarPicker(containerId, initialValue, onChange){
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  let value = initialValue || 0;
+
+  const wrap = document.createElement("div");
+  wrap.className = "star-picker";
+  wrap.style.touchAction = "none";
+
+  for(let i=0;i<5;i++){
+    const star = document.createElement("div");
+    star.className = "star";
+    star.textContent = "☆";
+    star.dataset.index = i;
+    wrap.appendChild(star);
+  }
+
+  function render(){
+    wrap.querySelectorAll(".star").forEach((star, i)=>{
+      const diff = value - i;
+      if(diff >= 1) star.textContent = "★";
+      else if(diff >= 0.5) star.textContent = "★"; // Basisstern...
+      else star.textContent = "☆";
+      star.style.color = diff >= 1 ? "var(--gold)" : (diff >= 0.5 ? "var(--gold)" : "var(--card-2)");
+      // Für halbe Sterne: leichte Transparenz-Optik statt echtem Clip (einfach & robust)
+      star.style.opacity = (diff >= 0.5 && diff < 1) ? "0.55" : "1";
+    });
+  }
+
+  function setFromEvent(clientX){
+    const rect = wrap.getBoundingClientRect();
+    const starWidth = rect.width / 5;
+    let rel = (clientX - rect.left) / starWidth;
+    rel = Math.max(0, Math.min(5, rel));
+    // Runden auf 0.5-Schritte
+    value = Math.round(rel * 2) / 2;
+    if(value < 0.5) value = 0.5;
+    render();
+    onChange(value);
+  }
+
+  wrap.addEventListener("pointerdown", (e)=>{ wrap.setPointerCapture(e.pointerId); setFromEvent(e.clientX); });
+  wrap.addEventListener("pointermove", (e)=>{ if(e.pressure > 0 || e.buttons > 0) setFromEvent(e.clientX); });
+  wrap.querySelectorAll(".star").forEach((star, i)=>{
+    star.addEventListener("click", ()=>{ value = i+1; render(); onChange(value); });
+  });
+
+  render();
+  container.appendChild(wrap);
+  return { get: ()=>value, set: (v)=>{ value=v; render(); } };
+}
+
+function openRatingSheet(completedQuestId){
+  const cq = state.completedQuests.find(c=>c.id===completedQuestId);
+  if(!cq) return;
+
+  const rows = state.users.map(u=>{
+    const existing = cq.ratings[u.id];
+    return `
+      <div class="rate-row">
+        <div class="rate-name">${escapeHtml(u.name)}</div>
+        <div id="starPicker_${u.id}"></div>
+      </div>
+    `;
+  }).join("");
+
+  openSheet(`
+    <div class="sheet-title">Wie war die Quest?</div>
+    <div class="detail-label" style="margin-bottom:14px;">${CATEGORY_ICON[cq.category]||""} ${escapeHtml(cq.title.toUpperCase())}</div>
+    ${rows}
+    <div class="field-label">Kurze Notiz (optional)</div>
+    <textarea class="field-textarea" id="ratingNoteInput" placeholder="Was war gut / schlecht?"></textarea>
+    <div class="sheet-btn-row">
+      <button class="btn-primary" id="saveRatingBtn">BEWERTUNG SPEICHERN</button>
+    </div>
+  `);
+
+  const pickers = {};
+  state.users.forEach(u=>{
+    const existing = cq.ratings[u.id];
+    pickers[u.id] = buildStarPicker("starPicker_"+u.id, existing ? existing.stars : 0, ()=>{});
+  });
+  const noteInput = document.getElementById("ratingNoteInput");
+  const myExisting = cq.ratings[state.currentUserId];
+  if(myExisting && myExisting.note) noteInput.value = myExisting.note;
+
+  document.getElementById("saveRatingBtn").addEventListener("click", ()=>{
+    state.users.forEach(u=>{
+      const v = pickers[u.id].get();
+      if(v > 0){
+        const prevNote = cq.ratings[u.id] ? cq.ratings[u.id].note : "";
+        cq.ratings[u.id] = { stars: v, note: (u.id===state.currentUserId ? noteInput.value.trim() : prevNote) };
+      }
+    });
+    saveState();
+    closeSheet();
+    showToast("Bewertung gespeichert.");
+    renderCurrentView();
+  });
+}
+
+/* ============================================================
+   9. SHEET / MODAL HELPERS
+   ============================================================ */
+function openSheet(innerHtml){
+  const root = document.getElementById("sheetRoot");
+  root.innerHTML = `
+    <div class="sheet-backdrop" id="sheetBackdrop">
+      <div class="sheet" id="sheetBox" style="position:relative;">
+        <div class="sheet-handle"></div>
+        <button class="sheet-close" id="sheetCloseBtn">✕</button>
+        ${innerHtml}
+      </div>
+    </div>
+  `;
+  document.getElementById("sheetCloseBtn").addEventListener("click", closeSheet);
+  document.getElementById("sheetBackdrop").addEventListener("click", (e)=>{
+    if(e.target.id === "sheetBackdrop") closeSheet();
+  });
+}
+function closeSheet(){
+  document.getElementById("sheetRoot").innerHTML = "";
+}
+
+/* ============================================================
+   10. NAVIGATION / VIEW SWITCHING
+   ============================================================ */
+let activeView = "draw";
+
+function goToView(name){
+  activeView = name;
+  document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
+  document.getElementById("view-"+name).classList.remove("hidden");
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
+  const fab = document.getElementById("ideasFab");
+  if(fab) fab.classList.toggle("hidden", name !== "ideas");
+  renderCurrentView();
+  window.scrollTo(0,0);
+}
+
+function renderCurrentView(){
+  if(activeView === "draw") renderDrawView();
+  else if(activeView === "archive") renderArchiveView();
+  else if(activeView === "ideas") renderIdeasView();
+  else if(activeView === "more") renderMoreView();
+}
+
+function refreshHeader(){
+  const u = currentUser();
+  if(u){
+    document.getElementById("profileName").textContent = u.name;
+    document.getElementById("profileAvatar").textContent = initials(u.name);
+  }
+  const d = new Date();
+  document.getElementById("topDateLine").textContent = d.toLocaleDateString("de-DE", {weekday:"long", day:"2-digit", month:"long"});
+}
+
+/* ============================================================
+   11. ONBOARDING FLOW
+   ============================================================ */
+function renderOnboardingProfiles(){
+  const wrap = document.getElementById("onbProfiles");
+  wrap.innerHTML = "";
+  state.users.forEach(u=>{
+    const chip = document.createElement("div");
+    chip.className = "onb-profile-chip";
+    chip.textContent = u.name;
+    chip.addEventListener("click", ()=>{
+      state.currentUserId = u.id;
+      saveState();
+      enterApp();
+    });
+    wrap.appendChild(chip);
+  });
+}
+
+function initOnboarding(){
+  renderOnboardingProfiles();
+  const input = document.getElementById("onbNameInput");
+  const btn = document.getElementById("onbContinueBtn");
+  btn.addEventListener("click", ()=>{
+    const name = input.value.trim();
+    if(!name){ showToast("Bitte einen Namen eingeben."); return; }
+    const newUser = { id: uid("user"), name };
+    state.users.push(newUser);
+    state.currentUserId = newUser.id;
+    // erster Nutzer wird automatisch Ersteller der Seed-Ideen (rein kosmetisch)
+    if(state.users.length === 1){
+      state.ideas.forEach(i => { if(!i.creator) i.creator = newUser.id; });
+    }
+    saveState();
+    enterApp();
+  });
+  input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") btn.click(); });
+}
+
+function enterApp(){
+  document.getElementById("onboarding").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("bottomNav").classList.remove("hidden");
+  refreshHeader();
+  goToView("draw");
+}
+
+/* ============================================================
+   12. INIT
+   ============================================================ */
+function initNav(){
+  document.querySelectorAll(".nav-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> goToView(btn.dataset.view));
+  });
+}
+
+function init(){
+  ensureState();
+  initNav();
+  if(state.users.length > 0 && state.currentUserId){
+    enterApp();
+  } else {
+    initOnboarding();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>
