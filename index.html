@@ -489,7 +489,16 @@ body.theme-light .reminder-banner{ background:rgba(244,193,66,0.14); }
   <div class="onb-mark">SIDEQUEST</div>
   <div class="onb-title">Was machen<br>wir heute?</div>
   <div class="onb-sub">Euer gemeinsamer Pool an Ideen.</div>
-  <div class="onb-card">
+
+  <!-- Phase A: Gruppen-Code -->
+  <div class="onb-card" id="onbGroupCard">
+    <input id="onbGroupInput" class="onb-input" type="text" placeholder="Euer Code" maxlength="30" autocapitalize="none">
+    <div class="detail-text" style="margin-bottom:18px;">Jeder von euch gibt auf seinem Handy denselben Code ein — so seht ihr dieselben Ideen und Mitglieder.</div>
+    <button id="onbGroupContinueBtn" class="btn-primary">VERBINDEN</button>
+  </div>
+
+  <!-- Phase B: Name wählen -->
+  <div class="onb-card hidden" id="onbNameCard">
     <div class="onb-label" id="onbLabel">Wähle deinen Namen</div>
     <div id="onbProfiles" class="onb-profiles"></div>
     <div id="onbNewProfileWrap">
@@ -553,9 +562,190 @@ body.theme-light .reminder-banner{ background:rgba(244,193,66,0.14); }
 <div id="sheetRoot"></div>
 <div id="toastRoot"></div>
 
+<!-- ============================================================
+     SUPABASE (Cloud-Sync zwischen Geräten)
+     Kostenlos, Anmeldung direkt mit GitHub möglich (kein Google-Konto
+     nötig). Siehe SUPABASE_CONFIG weiter unten für die Einrichtung —
+     ohne eigene Config läuft die App automatisch im lokalen Offline-
+     Modus weiter (wie zuvor).
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
 "use strict";
+
+/* ============================================================
+   0. SUPABASE-EINRICHTUNG (einmalig von dir auszufüllen)
+   ============================================================
+   So bekommst du die Werte kostenlos, ganz ohne Google-Konto:
+   1. Auf https://supabase.com gehen → "Start your project" →
+      "Continue with GitHub" (mit deinem vorhandenen GitHub-Account).
+   2. "New Project" → Namen vergeben, ein Datenbank-Passwort setzen
+      (kannst du dir merken, brauchen wir hier aber nicht mehr),
+      Region wählen (z.B. Frankfurt/eu-central) → "Create new project".
+      Das Projekt braucht ca. 1–2 Minuten zum Hochfahren.
+   3. Im Projekt links auf "SQL Editor" → "New query" → folgendes
+      einfügen und auf "RUN" klicken:
+
+        create table sidequest_groups (
+          id text primary key,
+          data jsonb not null,
+          updated_at timestamptz default now()
+        );
+
+        alter publication supabase_realtime add table sidequest_groups;
+
+        alter table sidequest_groups enable row level security;
+
+        create policy "Allow all access" on sidequest_groups
+          for all using (true) with check (true);
+
+      (Die Policy ist bewusst offen, da es keinen Login gibt — der
+      Gruppen-Code wirkt wie ein gemeinsames Passwort. Nicht öffentlich
+      teilen, sonst kann jeder mit dem Code mitlesen/schreiben.)
+   4. Links auf das Zahnrad "Project Settings" → "API" → dort stehen
+      "Project URL" und der Schlüssel "anon public". Beide unten bei
+      SUPABASE_CONFIG einfügen.
+
+   Ohne ausgefüllte Config bleibt die App voll funktionsfähig, aber
+   rein lokal auf diesem Gerät (wie bisher) — es wird nichts synchronisiert.
+   ============================================================ */
+const SUPABASE_CONFIG = {
+  url: "YOUR_PROJECT.supabase.co",
+  anonKey: "YOUR_ANON_KEY"
+};
+const CLOUD_CONFIGURED = SUPABASE_CONFIG.url && SUPABASE_CONFIG.url.indexOf("YOUR_") !== 0;
+
+let supabaseClient = null;
+let cloudChannel = null;
+let cloudConnected = false;
+let cloudLoadedOnce = false;
+
+function initSupabaseIfConfigured(){
+  if(!CLOUD_CONFIGURED) return false;
+  if(supabaseClient) return true;
+  try{
+    const url = SUPABASE_CONFIG.url.indexOf("http") === 0 ? SUPABASE_CONFIG.url : ("https://" + SUPABASE_CONFIG.url);
+    supabaseClient = supabase.createClient(url, SUPABASE_CONFIG.anonKey);
+    return true;
+  }catch(e){
+    console.warn("Supabase konnte nicht initialisiert werden:", e);
+    return false;
+  }
+}
+
+/* Die Felder, die zwischen allen Geräten geteilt werden (Ideen, Mitglieder,
+   aktive/erledigte Quests). Einstellungen, Filter und "wer bin ich auf
+   diesem Gerät" bleiben bewusst lokal und werden NICHT synchronisiert. */
+function sharedStateSlice(){
+  return {
+    users: state.users,
+    ideas: state.ideas,
+    activeQuest: state.activeQuest,
+    completedQuests: state.completedQuests,
+    recentlyDrawnIds: state.recentlyDrawnIds,
+    nextIdeaCounter: state.nextIdeaCounter,
+    nextQuestCounter: state.nextQuestCounter,
+    installedAt: state.installedAt
+  };
+}
+
+async function connectToGroup(groupCode){
+  if(!initSupabaseIfConfigured()){
+    showToast("Cloud-Sync ist noch nicht eingerichtet — läuft lokal auf diesem Gerät.");
+    return;
+  }
+  try{
+    const { data, error } = await supabaseClient
+      .from("sidequest_groups")
+      .select("data")
+      .eq("id", groupCode)
+      .maybeSingle();
+
+    if(error) throw error;
+
+    if(data && data.data){
+      applyRemoteSharedState(data.data);
+    } else {
+      // Gruppe existiert noch nicht in der Cloud -> mit dem lokalen Stand anlegen
+      const { error: insertError } = await supabaseClient
+        .from("sidequest_groups")
+        .insert({ id: groupCode, data: sharedStateSlice() });
+      if(insertError) console.warn("Anlegen der Gruppe fehlgeschlagen:", insertError);
+    }
+
+    cloudConnected = true;
+
+    // Live-Updates von anderen Geräten empfangen
+    if(cloudChannel) supabaseClient.removeChannel(cloudChannel);
+    cloudChannel = supabaseClient
+      .channel("sidequest_group_" + groupCode)
+      .on("postgres_changes",
+        { event: "UPDATE", schema: "public", table: "sidequest_groups", filter: `id=eq.${groupCode}` },
+        payload => { applyRemoteSharedState(payload.new.data); }
+      )
+      .subscribe();
+
+  }catch(e){
+    console.warn("Cloud-Sync-Fehler:", e);
+    cloudConnected = false;
+    showToast("Keine Verbindung zur Cloud — Änderungen bleiben vorerst lokal.");
+  }
+
+  if(!cloudLoadedOnce){
+    cloudLoadedOnce = true;
+    onCloudFirstLoad();
+  }
+}
+
+/* Übernimmt einen entfernten Datenstand (von einem anderen Gerät), ohne
+   ihn sofort wieder zurückzuschreiben (sonst Endlosschleife). */
+function applyRemoteSharedState(remote){
+  if(!remote) return;
+  const myIdBefore = state.currentUserId;
+  const myUserBefore = myIdBefore ? (state.users || []).find(u=>u.id===myIdBefore) : null;
+
+  state.users = remote.users || state.users;
+  state.ideas = remote.ideas || state.ideas;
+  state.activeQuest = ("activeQuest" in remote) ? remote.activeQuest : state.activeQuest;
+  state.completedQuests = remote.completedQuests || state.completedQuests;
+  state.recentlyDrawnIds = remote.recentlyDrawnIds || state.recentlyDrawnIds;
+  state.nextIdeaCounter = remote.nextIdeaCounter || state.nextIdeaCounter;
+  state.nextQuestCounter = remote.nextQuestCounter || state.nextQuestCounter;
+  state.installedAt = remote.installedAt || state.installedAt;
+
+  // Eigenes Profil fehlt in den frisch geladenen Cloud-Daten? (z.B. beim
+  // erstmaligen Beitritt zu einer bereits bestehenden Gruppe mit anderen
+  // Mitgliedern) -> eigenes Profil ergänzen und zurück in die Cloud schreiben,
+  // damit die anderen einen sofort sehen.
+  if(myIdBefore && myUserBefore && !state.users.find(u=>u.id===myIdBefore)){
+    state.users = state.users.concat([myUserBefore]);
+    pushSharedState();
+  }
+
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  if(document.getElementById("app") && !document.getElementById("app").classList.contains("hidden")){
+    refreshHeader();
+    renderCurrentView();
+  }
+}
+
+function pushSharedState(){
+  if(!cloudConnected || !state.groupCode || !supabaseClient) return;
+  supabaseClient
+    .from("sidequest_groups")
+    .upsert({ id: state.groupCode, data: sharedStateSlice(), updated_at: new Date().toISOString() })
+    .then(({error})=>{
+      if(error) console.warn("Synchronisierung fehlgeschlagen (bleibt lokal gespeichert):", error);
+    });
+}
+
+function onCloudFirstLoad(){
+  // Wird einmalig aufgerufen, sobald der erste Cloud-Stand für die Gruppe da ist.
+  if(document.getElementById("onboarding") && !document.getElementById("onboarding").classList.contains("hidden")){
+    renderOnboardingProfiles();
+  }
+}
 
 /* ============================================================
    1. STATE & PERSISTENZ
@@ -613,6 +803,28 @@ const AI_QUEST_POOL = [
   {title:"Perspektivwechsel-Spaziergang", desc:"Lauft eine vertraute Strecke rückwärts oder mit vertauschten Rollen als Local/Tourist.", category:"Quatsch", duration:"short", location:"outdoor", adventure:2},
   {title:"Mini-Filmfestival", desc:"Jeder bringt einen selbstgedrehten 30-Sekunden-Clip zu einem Thema mit.", category:"Film", duration:"medium", location:"any", adventure:2},
   {title:"Unbekanntes Restaurant", desc:"Wählt zufällig ein Restaurant aus, in dem keiner von euch je war.", category:"Essen", duration:"medium", location:"outdoor", adventure:3},
+  {title:"Dosenwerfen im Park", desc:"Bringt leere Dosen mit und baut euch eine improvisierte Kegelbahn im Park.", category:"Quatsch", duration:"short", location:"outdoor", adventure:1},
+  {title:"Alte Schulhof-Spiele", desc:"Sucht euch 3 vergessene Kinderspiele raus (Gummitwist, Himmel & Hölle, Murmeln) und spielt sie todernst.", category:"Quatsch", duration:"short", location:"outdoor", adventure:1},
+  {title:"Kostenlos-Challenge", desc:"Ein ganzer Nachmittag, an dem ihr keinen einzigen Cent ausgeben dürft — aber trotzdem was erlebt.", category:"Abenteuer", duration:"long", location:"any", adventure:2},
+  {title:"Menschlicher Wegweiser", desc:"Einer schließt die Augen, die anderen dirigieren ihn nur durch Klatschen sicher durch einen Park.", category:"Quatsch", duration:"short", location:"outdoor", adventure:2},
+  {title:"Gesichter im Alltag", desc:"15 Minuten lang Alltagsgegenstände fotografieren, die wie Gesichter aussehen. Wer findet die meisten?", category:"Kreativ", duration:"short", location:"any", adventure:1},
+  {title:"Impro für Anfänger", desc:"Erfindet spontan eine 5-Minuten-Theaterszene zu einem zufällig gewählten Wort.", category:"Kreativ", duration:"short", location:"indoor", adventure:2},
+  {title:"Rückwärts-Tag", desc:"Frühstückt abends, esst das Dessert zuerst, macht den Tag in umgekehrter Reihenfolge.", category:"Quatsch", duration:"long", location:"any", adventure:2},
+  {title:"Anonyme Komplimente", desc:"Schreibt kleine nette Zettel und klemmt sie unauffällig an fremde Fahrräder in der Nachbarschaft.", category:"Stadt", duration:"short", location:"outdoor", adventure:2},
+  {title:"Der alberne Wettkampf", desc:"Erfindet einen komplett sinnlosen Wettbewerb (längste Grimasse, Einbeinstand) und kürt einen Champion.", category:"Quatsch", duration:"short", location:"any", adventure:1},
+  {title:"Pfandflaschen-Rennen", desc:"20 Minuten Zeit, so viele Pfandflaschen wie möglich sammeln — das Geld gibt's für gemeinsame Süßigkeiten.", category:"Stadt", duration:"short", location:"outdoor", adventure:2},
+  {title:"Halbes-Gesicht-Schminken", desc:"Schminkt euch gegenseitig nur eine Gesichtshälfte, möglichst kreativ. Ergebnis fotografieren.", category:"Kreativ", duration:"short", location:"indoor", adventure:2},
+  {title:"Höchster Turm der Stadt", desc:"Baut aus allem, was ihr zuhause findet (Bücher, Dosen, Klopapier), die höchste freistehende Konstruktion.", category:"Kreativ", duration:"short", location:"indoor", adventure:1},
+  {title:"Riech-Ratespiel", desc:"Augen verbinden und Gewürze, Parfums oder Snacks nur am Geruch erraten.", category:"Quatsch", duration:"short", location:"indoor", adventure:1},
+  {title:"Regenbogen-Foto-Streifzug", desc:"Lauft los und fotografiert unterwegs Dinge in möglichst vielen Regenbogenfarben.", category:"Stadt", duration:"medium", location:"outdoor", adventure:2},
+  {title:"Kissenschlacht-Turnier", desc:"Klassische Kissenschlacht, aber mit echtem Punktesystem und einem Kommentator.", category:"Quatsch", duration:"short", location:"indoor", adventure:2},
+  {title:"Zeitkapsel für später", desc:"Packt eine kleine Kiste mit Dingen von heute und versteckt sie für euch selbst in einem Jahr.", category:"Kreativ", duration:"medium", location:"any", adventure:2},
+  {title:"Mini-Sprachkurs", desc:"Jeder bringt den anderen 10 Wörter in einer Sprache bei, die sonst keiner spricht.", category:"Sonstiges", duration:"short", location:"indoor", adventure:1},
+  {title:"Nachbarschafts-Olympiade", desc:"Erfindet 3 alberne Disziplinen (Wäscheklammer-Weitwurf, Löffel-Ei-Lauf) und tragt sie im Hof aus.", category:"Sport", duration:"medium", location:"outdoor", adventure:2},
+  {title:"Der teuerste Blick", desc:"Geht in einen Laden, den ihr euch normalerweise nie leisten würdet, und tut so, als würdet ihr einkaufen.", category:"Stadt", duration:"short", location:"outdoor", adventure:3},
+  {title:"Gruselgeschichten im Dunkeln", desc:"Taschenlampe an, Licht aus — jeder erzählt reihum eine kurze Gruselgeschichte.", category:"Quatsch", duration:"short", location:"indoor", adventure:2},
+  {title:"Ein Tag als Filmfigur", desc:"Jeder wählt eine Filmfigur und muss sich für 2 Stunden wie sie verhalten — ohne es zu erklären.", category:"Film", duration:"long", location:"any", adventure:4},
+  {title:"Wasserballon-Zielwerfen", desc:"Baut euch ein Zielsystem und werft Wasserballons um die Wette.", category:"Sport", duration:"short", location:"outdoor", adventure:2},
 ];
 
 let state = null;
@@ -629,6 +841,7 @@ function saveState(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }catch(e){ console.warn("Speichern fehlgeschlagen:", e); }
+  pushSharedState();
 }
 
 function makeSeedState(){
@@ -651,6 +864,7 @@ function makeSeedState(){
   return {
     users: [],
     currentUserId: null,
+    groupCode: null,
     ideas: ideas,
     activeQuest: null,
     completedQuests: [],
@@ -659,7 +873,7 @@ function makeSeedState(){
     nextQuestCounter: 1,
     installedAt: now,
     settings: { weatherAware: false, darkMode: true, theme: "dark", notificationsEnabled: false },
-    filters: { duration: "any", location: "any", adventure: 3 }
+    filters: { duration: "any", location: "any", adventure: 3, adventureAny: false }
   };
 }
 
@@ -670,7 +884,8 @@ function ensureState(){
     saveState();
   }
   // Migrations-Sicherheit für fehlende Felder
-  if(!state.filters) state.filters = { duration:"any", location:"any", adventure:3 };
+  if(!state.filters) state.filters = { duration:"any", location:"any", adventure:3, adventureAny:false };
+  if(typeof state.filters.adventureAny !== "boolean") state.filters.adventureAny = false;
   if(!state.settings) state.settings = { weatherAware:false, darkMode:true, theme:"dark", notificationsEnabled:false };
   if(!state.settings.theme) state.settings.theme = "dark";
   if(typeof state.settings.notificationsEnabled !== "boolean") state.settings.notificationsEnabled = false;
@@ -680,6 +895,7 @@ function ensureState(){
     const oldestIdea = state.ideas.reduce((min,i)=> i.createdAt < min ? i.createdAt : min, Date.now());
     state.installedAt = oldestIdea;
   }
+  if(typeof state.groupCode === "undefined") state.groupCode = null;
   applyTheme();
 }
 
@@ -802,9 +1018,11 @@ function locationMatches(ideaLoc, filterLoc){
 
 function scoreIdea(idea, filters, weather){
   let score = 1;
-  // Abenteuer-Nähe zum Slider (1-5)
-  const dist = Math.abs((idea.adventure||3) - filters.adventure);
-  score *= (1 / (1 + dist)) * 2;
+  // Abenteuer-Nähe zum Slider (1-5) — nur wenn "Egal" nicht aktiv ist
+  if(!filters.adventureAny){
+    const dist = Math.abs((idea.adventure||3) - filters.adventure);
+    score *= (1 / (1 + dist)) * 2;
+  }
   // Favoriten leicht bevorzugen
   if(idea.favorite) score *= 1.6;
   // Wartezeit im Pool leicht bevorzugen (je länger, desto eher dran)
@@ -901,10 +1119,13 @@ function renderDrawView(){
       </div>
 
       <div class="filter-group">
-        <div class="filter-group-label">ABENTEUER</div>
-        <div class="slider-wrap">
+        <div class="filter-group-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>ABENTEUER</span>
+          <span class="chip ${f.adventureAny?'active turq':''}" id="adventureAnyChip" style="padding:6px 12px; font-size:12px;">Egal</span>
+        </div>
+        <div class="slider-wrap" style="${f.adventureAny?'opacity:0.35;':''}">
           <div class="slider-labels"><span>ENTSPANNT</span><span>CHAOTISCH</span></div>
-          <input type="range" id="adventureSlider" min="1" max="5" step="1" value="${f.adventure}">
+          <input type="range" id="adventureSlider" min="1" max="5" step="1" value="${f.adventure}" ${f.adventureAny?'disabled':''}>
         </div>
       </div>
 
@@ -979,6 +1200,14 @@ function bindDrawFilterEvents(){
     slider.addEventListener("input", ()=>{
       state.filters.adventure = parseInt(slider.value,10);
       saveState();
+    });
+  }
+  const advAnyChip = document.getElementById("adventureAnyChip");
+  if(advAnyChip){
+    advAnyChip.addEventListener("click", ()=>{
+      state.filters.adventureAny = !state.filters.adventureAny;
+      saveState();
+      renderDrawView();
     });
   }
   const wt = document.getElementById("weatherToggle");
@@ -1654,7 +1883,7 @@ function renderMembersList(){
   const rows = state.users.map(u => `
     <div class="more-row" style="align-items:center;">
       <div class="more-row-label" style="flex:1;">
-        <div class="profile-avatar" data-switch="${u.id}" style="cursor:pointer;">${initials(u.name)}</div>
+        <div class="profile-avatar" data-switch="${u.id}" style="cursor:pointer;" ${avatarInlineAttrs(u)}>${avatarInnerText(u)}</div>
         <input class="field-input" style="padding:8px 10px; font-size:14px; flex:1;" data-rename="${u.id}" value="${escapeHtml(u.name)}">
       </div>
       ${u.id===state.currentUserId ? '<span style="color:var(--turq); font-size:12px; font-weight:700; margin-right:8px;">Aktiv</span>' : `<button class="icon-btn" data-switch-btn="${u.id}" style="flex:0 0 auto; padding:8px 10px; margin-right:8px;">Wechseln</button>`}
@@ -1664,9 +1893,11 @@ function renderMembersList(){
 
   openSheet(`
     <div class="sheet-title">👥 Mitglieder</div>
-    <div class="detail-text" style="margin-bottom:16px;">Zeigt nur Profile, die auf diesem Gerät erstellt wurden — es gibt keine Synchronisation zwischen verschiedenen Handys.</div>
+    <div class="detail-text" style="margin-bottom:16px;">${cloudConnected
+      ? "Live synchronisiert — alle mit demselben Gruppen-Code sehen dieselbe Liste."
+      : "Cloud-Sync ist nicht verbunden — diese Liste zeigt nur Profile von diesem Gerät."}</div>
     <div class="more-group" id="membersRows">${rows}</div>
-    <div class="detail-text" style="text-align:center; margin-top:14px; font-size:12.5px;">Pro Gerät ist nur ein eigenes Profil vorgesehen. Neue Freunde legen ihr Profil auf ihrem eigenen Gerät an.</div>
+    <div class="detail-text" style="text-align:center; margin-top:14px; font-size:12.5px;">Jede:r legt sein Profil einmal auf dem eigenen Gerät an.</div>
   `);
 
   document.querySelectorAll("[data-rename]").forEach(inp=>{
@@ -1799,16 +2030,73 @@ function openStatsSheet(){
   `);
 }
 
+/* Profilbild einlesen, quadratisch zuschneiden und verkleinern (max. 240px,
+   JPEG komprimiert) — damit es klein genug bleibt, um mit der Gruppe
+   synchronisiert zu werden, ohne die Cloud-Datenbank aufzublähen. */
+function processAvatarFile(file){
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const size = 240;
+      const canvas = document.createElement("canvas");
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide) / 2;
+      const sy = (img.height - minSide) / 2;
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+      const me = currentUser();
+      if(me){
+        me.avatar = dataUrl;
+        saveState();
+        refreshHeader();
+        closeSheet();
+        setTimeout(openSettingsSheet, 150);
+      }
+    };
+    img.onerror = ()=> showToast("Bild konnte nicht gelesen werden.");
+    img.src = ev.target.result;
+  };
+  reader.onerror = ()=> showToast("Datei konnte nicht gelesen werden.");
+  reader.readAsDataURL(file);
+}
+
 function openSettingsSheet(){
   const u = currentUser();
   openSheet(`
     <div class="sheet-title">⚙️ Einstellungen</div>
 
-    <div class="field-label">Dein Name</div>
+    <div class="field-label">Profilbild</div>
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:6px;">
+      <div id="avatarPreview" class="profile-avatar" style="width:56px; height:56px; font-size:18px;" ${avatarInlineAttrs(u)}>${avatarInnerText(u)}</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <input type="file" accept="image/*" id="avatarFileInput" style="display:none;">
+        <button class="btn-ghost" id="chooseAvatarBtn" style="width:auto; padding:9px 16px;">Bild wählen</button>
+      </div>
+      ${u && u.avatar ? `<button class="icon-btn danger" id="removeAvatarBtn" style="flex:0 0 auto; padding:9px 14px;">Entfernen</button>` : ""}
+    </div>
+
+    <div class="field-label" style="margin-top:18px;">Dein Name</div>
     <input class="field-input" id="ownNameInput" value="${u?escapeHtml(u.name):""}" maxlength="16">
     <div class="sheet-btn-row" style="margin-top:10px;">
       <button class="btn-primary" id="saveOwnNameBtn">Namen speichern</button>
     </div>
+
+    <div class="field-label" style="margin-top:22px;">Gruppen-Code</div>
+    <div class="detail-text" style="margin-bottom:6px;">
+      ${cloudConnected
+        ? `🟢 Verbunden als „${escapeHtml(state.groupCode||"")}"`
+        : (CLOUD_CONFIGURED ? `🟡 Nicht verbunden` : `⚪ Cloud-Sync nicht eingerichtet — läuft lokal auf diesem Gerät`)}
+    </div>
+    ${!state.groupCode ? `
+      <input class="field-input" id="joinGroupInput" placeholder="Gruppen-Code eingeben" style="margin-top:8px;">
+      <div class="sheet-btn-row" style="margin-top:10px;">
+        <button class="btn-primary" id="joinGroupBtn">Mit Gruppe verbinden</button>
+      </div>
+    ` : ""}
+    <div class="detail-text" style="font-size:12.5px; margin-top:8px;">Teile diesen Code nur mit deiner Gruppe — jede:r mit dem Code kann eure Ideen sehen und bearbeiten.</div>
 
     <div class="quick-toggle" style="margin-top:22px;">
       <div class="toggle-text">🌙 Dark Mode</div>
@@ -1832,9 +2120,30 @@ function openSettingsSheet(){
 
     <div class="detail-block" style="margin-top:24px; text-align:center;">
       <div class="detail-label">APP-INFO</div>
-      <div class="detail-text">SIDEQUEST · Version 1.0<br>Alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert.</div>
+      <div class="detail-text">SIDEQUEST · Version 1.0<br>${cloudConnected ? "Ideen und Bewertungen werden mit deiner Gruppe synchronisiert." : "Alle Daten werden lokal auf diesem Gerät gespeichert."}</div>
     </div>
   `);
+
+  document.getElementById("chooseAvatarBtn").addEventListener("click", ()=>{
+    document.getElementById("avatarFileInput").click();
+  });
+  document.getElementById("avatarFileInput").addEventListener("change", (e)=>{
+    const file = e.target.files[0];
+    if(file) processAvatarFile(file);
+  });
+  const removeAvatarBtn = document.getElementById("removeAvatarBtn");
+  if(removeAvatarBtn){
+    removeAvatarBtn.addEventListener("click", ()=>{
+      const me = currentUser();
+      if(me){
+        delete me.avatar;
+        saveState();
+        refreshHeader();
+        closeSheet();
+        setTimeout(openSettingsSheet, 150);
+      }
+    });
+  }
 
   document.getElementById("saveOwnNameBtn").addEventListener("click", ()=>{
     const name = document.getElementById("ownNameInput").value.trim();
@@ -1842,6 +2151,31 @@ function openSettingsSheet(){
     const me = currentUser();
     if(me){ me.name = name; saveState(); refreshHeader(); showToast("Name aktualisiert."); }
   });
+
+  const joinBtn = document.getElementById("joinGroupBtn");
+  if(joinBtn){
+    joinBtn.addEventListener("click", ()=>{
+      const code = document.getElementById("joinGroupInput").value.trim().toLowerCase().replace(/\s+/g,"-");
+      if(!code){ showToast("Bitte einen Gruppen-Code eingeben."); return; }
+      if(!CLOUD_CONFIGURED){ showToast("Cloud-Sync ist im Code noch nicht eingerichtet (SUPABASE_CONFIG)."); return; }
+      state.groupCode = code;
+      saveState();
+      joinBtn.disabled = true;
+      joinBtn.textContent = "Verbinde …";
+      connectToGroup(code);
+      let waited = 0;
+      const waitForLoad = setInterval(()=>{
+        waited += 200;
+        if(cloudLoadedOnce || waited >= 4000){
+          clearInterval(waitForLoad);
+          closeSheet();
+          showToast("Mit Gruppe verbunden.");
+          refreshHeader();
+          renderCurrentView();
+        }
+      }, 200);
+    });
+  }
 
   document.getElementById("themeToggle").addEventListener("change", (e)=>{
     state.settings.theme = e.target.checked ? "dark" : "light";
@@ -1871,9 +2205,12 @@ function openSettingsSheet(){
 }
 
 function confirmResetData(){
+  const cloudMsg = cloudConnected
+    ? "Das trennt nur dieses Gerät: Gruppen-Code und dein Profil-Link werden hier gelöscht. Die gemeinsamen Ideen, Mitglieder und Bewertungen in der Cloud bleiben für alle anderen erhalten."
+    : "Alle Nutzer, Ideen, aktiven und erledigten Quests auf diesem Gerät werden unwiderruflich gelöscht.";
   openSheet(`
-    <div class="sheet-title">Wirklich alles zurücksetzen?</div>
-    <div class="detail-text" style="margin-bottom:20px;">Alle Nutzer, Ideen, aktiven und erledigten Quests werden unwiderruflich gelöscht.</div>
+    <div class="sheet-title">Wirklich zurücksetzen?</div>
+    <div class="detail-text" style="margin-bottom:20px;">${cloudMsg}</div>
     <div class="sheet-btn-row">
       <button class="btn-ghost" id="cancelResetBtn" style="width:100%;">Abbrechen</button>
       <button class="btn-primary" id="confirmResetBtn" style="background:linear-gradient(120deg, var(--danger), #c94764);">Zurücksetzen</button>
@@ -2040,14 +2377,33 @@ function refreshHeader(){
   const u = currentUser();
   if(u){
     document.getElementById("profileName").textContent = u.name;
-    document.getElementById("profileAvatar").textContent = initials(u.name);
+    const avatarEl = document.getElementById("profileAvatar");
+    if(u.avatar){
+      avatarEl.style.backgroundImage = `url('${u.avatar}')`;
+      avatarEl.style.backgroundSize = "cover";
+      avatarEl.style.backgroundPosition = "center";
+      avatarEl.textContent = "";
+    } else {
+      avatarEl.style.backgroundImage = "";
+      avatarEl.textContent = initials(u.name);
+    }
   }
   const d = new Date();
   document.getElementById("topDateLine").textContent = d.toLocaleDateString("de-DE", {weekday:"long", day:"2-digit", month:"long"});
 }
 
+/* Liefert HTML für einen Profilkreis — Bild, falls vorhanden, sonst Initialen. */
+function avatarInlineAttrs(u){
+  return u && u.avatar
+    ? `style="background-image:url('${u.avatar}');background-size:cover;background-position:center;"`
+    : "";
+}
+function avatarInnerText(u){
+  return (u && u.avatar) ? "" : initials(u ? u.name : "?");
+}
+
 /* ============================================================
-   11. ONBOARDING FLOW
+   11. ONBOARDING FLOW (Gruppen-Code -> Name wählen)
    ============================================================ */
 function renderOnboardingProfiles(){
   const wrap = document.getElementById("onbProfiles");
@@ -2063,26 +2419,65 @@ function renderOnboardingProfiles(){
     });
     wrap.appendChild(chip);
   });
-
-  // Ein Gerät = ein Profil: Ist auf diesem Gerät bereits ein Profil vorhanden,
-  // kann kein weiteres neu angelegt werden — nur ein bestehendes ausgewählt.
-  const newWrap = document.getElementById("onbNewProfileWrap");
   const label = document.getElementById("onbLabel");
-  if(state.users.length > 0){
-    newWrap.classList.add("hidden");
-    label.textContent = "Dieses Gerät kennt bereits ein Profil";
-  } else {
-    newWrap.classList.remove("hidden");
-    label.textContent = "Wähle deinen Namen";
-  }
+  label.textContent = state.users.length > 0
+    ? "Schon dabei? Tippe deinen Namen an — neu hier? Trag dich unten ein."
+    : "Wähle deinen Namen";
 }
 
+let onboardingListenersBound = false;
+
 function initOnboarding(){
-  renderOnboardingProfiles();
+  const groupCard = document.getElementById("onbGroupCard");
+  const nameCard = document.getElementById("onbNameCard");
+
+  function proceedToNamePhase(){
+    groupCard.classList.add("hidden");
+    nameCard.classList.remove("hidden");
+    renderOnboardingProfiles();
+  }
+
+  if(state.groupCode){
+    // Gruppen-Code auf diesem Gerät bereits bekannt (z.B. nach Profil-Löschung)
+    proceedToNamePhase();
+  } else {
+    groupCard.classList.remove("hidden");
+    nameCard.classList.add("hidden");
+  }
+
+  if(onboardingListenersBound) return; // Listener nur einmal binden
+  onboardingListenersBound = true;
+
+  const groupInput = document.getElementById("onbGroupInput");
+  const groupBtn = document.getElementById("onbGroupContinueBtn");
   const input = document.getElementById("onbNameInput");
   const btn = document.getElementById("onbContinueBtn");
+
+  groupBtn.addEventListener("click", ()=>{
+    const code = groupInput.value.trim().toLowerCase().replace(/\s+/g,"-");
+    if(!code){ showToast("Bitte einen Gruppen-Code eingeben."); return; }
+    state.groupCode = code;
+    saveState();
+    if(CLOUD_CONFIGURED){
+      groupBtn.disabled = true;
+      groupBtn.textContent = "Verbinde …";
+      connectToGroup(code);
+      let waited = 0;
+      const waitForLoad = setInterval(()=>{
+        waited += 200;
+        if(cloudLoadedOnce || waited >= 4000){
+          clearInterval(waitForLoad);
+          groupBtn.disabled = false;
+          groupBtn.textContent = "VERBINDEN";
+          proceedToNamePhase();
+        }
+      }, 200);
+    } else {
+      proceedToNamePhase();
+    }
+  });
+
   btn.addEventListener("click", ()=>{
-    if(state.users.length > 0) return; // Sicherheitsnetz: kein Zweitprofil pro Gerät
     const name = input.value.trim();
     if(!name){ showToast("Bitte einen Namen eingeben."); return; }
     const newUser = { id: uid("user"), name };
@@ -2137,7 +2532,10 @@ function initNav(){
 function init(){
   ensureState();
   initNav();
-  if(state.users.length > 0 && state.currentUserId){
+  if(state.groupCode){
+    connectToGroup(state.groupCode); // Cloud-Sync im Hintergrund fortsetzen
+  }
+  if(state.currentUserId){
     enterApp();
   } else {
     initOnboarding();
